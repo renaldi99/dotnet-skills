@@ -8,6 +8,17 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 
 ## [Unreleased]
 
+### Added
+- Contoh endpoint `PUT` (Update) pada modul Employees beserta DTO `UpdateEmployeeRequest`.
+- Contoh unit test Service (xUnit, NSubstitute, FakeTimeProvider) untuk konflik email,
+  audit timestamp, not found, dan propagasi `CancellationToken`.
+- `AGENTS.md` berisi instruksi maintenance untuk repository katalog skill ini.
+
+### Fixed
+- Repository Employees kini menerjemahkan pelanggaran index `UX_Employees_Email` (SQL Server
+  2601/2627) menjadi `ConflictException` di boundary persistence; contoh sebelumnya merujuk
+  helper yang tidak didefinisikan dan menangkap `DbUpdateException` di Service.
+
 ### Changed
 - Pulihkan diagram struktur project di referensi `module-scaffolding.md`, selaras
   dengan path contoh dan tanpa menambah konteks di file utama skill.
@@ -18,7 +29,9 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 - Selaraskan contoh clock injection, read-only versus tracked mutation, DTO projection,
   pagination bounded, dan pemetaan error validasi otomatis ke envelope.
 - Perjelas batas cancellation, konfigurasi autentikasi opsional, constraint uniqueness,
-  serta kebutuhan adapter provider dan integration test untuk konflik concurrent insert.
+  serta integration test untuk konflik concurrent insert.
+- Tegaskan setiap skill berdiri sendiri tanpa tautan atau ketergantungan antar-skill;
+  kombinasi skill disebutkan pengguna secara eksplisit di prompt.
 - Dokumentasikan pemasangan mandiri, discovery yang bergantung host, dan anchor instruksi
   pada repository backend tanpa menjanjikan kepatuhan AI absolut.
 

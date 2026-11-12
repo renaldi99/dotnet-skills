@@ -22,7 +22,7 @@ MyService.Api/
 |   |   |-- Repositories/
 |   |   |   `-- EmployeeRepository.cs       # Termasuk IEmployeeRepository
 |   |   |-- Dtos/
-|   |   |   `-- EmployeeDtos.cs
+|   |   |   `-- EmployeeDtos.cs             # Create, Update, Response, PageRequest
 |   |   |-- Entities/
 |   |   |   |-- Employee.cs
 |   |   |   `-- EmployeeConfiguration.cs
@@ -43,6 +43,11 @@ MyService.Api/
 |-- Data/
 |   `-- AppDbContext.cs
 `-- Program.cs
+
+MyService.Api.Tests/
+`-- Modules/
+    `-- Employees/
+        `-- EmployeeServiceTests.cs        # Unit test xUnit + NSubstitute + FakeTimeProvider
 ```
 
 Kode `Common/` tersedia di `foundation.md`, dan `Program.cs` di `bootstrap.md`;
@@ -64,6 +69,12 @@ public sealed record CreateEmployeeRequest(
     [Required, StringLength(100)] string FirstName,
     [Required, StringLength(100)] string LastName,
     [Required, EmailAddress, StringLength(254)] string Email,
+    [Required, StringLength(100)] string Position,
+    decimal Salary, Guid DepartmentId);
+
+public sealed record UpdateEmployeeRequest(
+    [Required, StringLength(100)] string FirstName,
+    [Required, StringLength(100)] string LastName,
     [Required, StringLength(100)] string Position,
     decimal Salary, Guid DepartmentId);
 
@@ -152,9 +163,13 @@ Read-only query tidak tracked; load untuk mutasi memiliki nama terpisah.
 `Add` hanya melakukan tracking secara sinkron. Service menentukan kapan `SaveChangesAsync`
 dipanggil; tidak perlu `Task.CompletedTask` atau method async palsu untuk `Update`.
 Pagination divalidasi juga di repository agar caller non-HTTP tidak melewati batas.
+`SaveChangesAsync` adalah boundary persistence: hanya pelanggaran index `UX_Employees_Email`
+yang dikenali yang diterjemahkan menjadi `ConflictException`; error database lain tetap 500.
 
 ```csharp
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using MyService.Api.Common.Errors;
 using MyService.Api.Common.Exceptions;
 using MyService.Api.Common.Models;
 using MyService.Api.Data;
@@ -206,8 +221,23 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
 
     public void Add(Employee employee) => context.Set<Employee>().Add(employee);
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        context.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsDuplicateEmail(exception))
+        {
+            throw new ConflictException(ErrorCode.EntityAlreadyExists, "Email sudah terdaftar.");
+        }
+    }
+
+    // SQL Server: 2601 = duplicate key pada unique index, 2627 = unique constraint.
+    // Provider lain memiliki metadata error berbeda; sesuaikan, jangan memetakan semua DbUpdateException.
+    private static bool IsDuplicateEmail(DbUpdateException exception) =>
+        exception.InnerException is SqlException { Number: 2601 or 2627 } sqlException
+        && sqlException.Message.Contains("UX_Employees_Email", StringComparison.OrdinalIgnoreCase);
 }
 ```
 
@@ -232,6 +262,7 @@ public interface IEmployeeService
     Task<PagedResult<EmployeeResponse>> GetPageAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task<EmployeeResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<EmployeeResponse> CreateAsync(CreateEmployeeRequest request, CancellationToken cancellationToken = default);
+    Task<EmployeeResponse> UpdateAsync(Guid id, UpdateEmployeeRequest request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
@@ -268,6 +299,26 @@ public sealed class EmployeeService(
         repository.Add(employee);
         await repository.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Employee created: {Id}", employee.Id);
+        return Map(employee);
+    }
+
+    public async Task<EmployeeResponse> UpdateAsync(
+        Guid id, UpdateEmployeeRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.Salary <= 0 || request.DepartmentId == Guid.Empty)
+            throw new AppException(ErrorCode.InvalidBusinessRule, "Gaji dan departemen harus valid.");
+
+        var employee = await repository.GetForUpdateAsync(id, cancellationToken)
+            ?? throw new NotFoundException(ErrorCode.EntityNotFound);
+
+        employee.FirstName = request.FirstName.Trim();
+        employee.LastName = request.LastName.Trim();
+        employee.Position = request.Position.Trim();
+        employee.Salary = request.Salary;
+        employee.DepartmentId = request.DepartmentId;
+        employee.UpdatedAt = timeProvider.GetUtcNow();
+
+        await repository.SaveChangesAsync(cancellationToken);
         return Map(employee);
     }
 
@@ -330,6 +381,17 @@ public sealed class EmployeesController(IEmployeeService service, TimeProvider t
             ApiResponse<EmployeeResponse>.SuccessResult(result, timeProvider));
     }
 
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<EmployeeResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(
+        Guid id, UpdateEmployeeRequest request, CancellationToken cancellationToken)
+    {
+        var result = await service.UpdateAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<EmployeeResponse>.SuccessResult(result, timeProvider));
+    }
+
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -360,14 +422,131 @@ public static class EmployeesModuleExtensions
 }
 ```
 
+## MyService.Api.Tests/Modules/Employees/EmployeeServiceTests.cs
+
+Unit test Service memakai **xUnit**, **NSubstitute**, dan **FakeTimeProvider**
+(`Microsoft.Extensions.TimeProvider.Testing`). Jika proyek sudah memakai library assertion
+atau mocking lain, ikuti proyek; jangan menambah dependency hanya demi contoh ini.
+Unit test ini tidak membuktikan envelope HTTP, validasi model, maupun unique constraint;
+kebutuhan tersebut diuji dengan integration test (lihat bagian akhir).
+
+```csharp
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
+using MyService.Api.Common.Errors;
+using MyService.Api.Common.Exceptions;
+using MyService.Api.Common.Models;
+using MyService.Api.Modules.Employees.Dtos;
+using MyService.Api.Modules.Employees.Entities;
+using MyService.Api.Modules.Employees.Repositories;
+using MyService.Api.Modules.Employees.Services;
+
+namespace MyService.Api.Tests.Modules.Employees;
+
+public sealed class EmployeeServiceTests
+{
+    private readonly IEmployeeRepository _repository = Substitute.For<IEmployeeRepository>();
+    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+    private readonly EmployeeService _sut;
+
+    public EmployeeServiceTests() =>
+        _sut = new EmployeeService(_repository, NullLogger<EmployeeService>.Instance, _clock);
+
+    [Fact]
+    public async Task CreateAsync_WhenEmailAlreadyExists_ThrowsConflictWithoutSaving()
+    {
+        var request = new CreateEmployeeRequest("John", "Doe", "john@corp.com", "Engineer", 5000, Guid.NewGuid());
+        _repository.ExistsByEmailAsync("JOHN@CORP.COM", Arg.Any<CancellationToken>()).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => _sut.CreateAsync(request, CancellationToken.None));
+
+        Assert.Equal(ErrorCode.EntityAlreadyExists, exception.ErrorCode);
+        _repository.DidNotReceive().Add(Arg.Any<Employee>());
+        await _repository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenValid_NormalizesEmailUsesClockAndForwardsToken()
+    {
+        using var cts = new CancellationTokenSource();
+        var request = new CreateEmployeeRequest(" Jane ", "Smith", "jane@corp.com", "Lead", 8000, Guid.NewGuid());
+
+        var result = await _sut.CreateAsync(request, cts.Token);
+
+        Assert.Equal("Jane Smith", result.FullName);
+        Assert.Equal(_clock.GetUtcNow(), result.CreatedAt);
+        await _repository.Received(1).ExistsByEmailAsync("JANE@CORP.COM", cts.Token);
+        _repository.Received(1).Add(Arg.Is<Employee>(employee =>
+            employee.Email == "JANE@CORP.COM" && employee.CreatedAt == _clock.GetUtcNow()));
+        await _repository.Received(1).SaveChangesAsync(cts.Token);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WhenNotFound_ThrowsNotFound()
+    {
+        var id = Guid.NewGuid();
+        _repository.GetByIdAsync(id, Arg.Any<CancellationToken>()).Returns((Employee?)null);
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => _sut.GetByIdAsync(id, CancellationToken.None));
+
+        Assert.Equal(ErrorCode.EntityNotFound, exception.ErrorCode);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenFound_UpdatesFieldsAndAuditTimestamp()
+    {
+        using var cts = new CancellationTokenSource();
+        var employee = new Employee
+        {
+            FirstName = "Old", LastName = "Name", Email = "OLD@CORP.COM", Position = "Staff",
+            Salary = 1000, DepartmentId = Guid.NewGuid(), CreatedAt = _clock.GetUtcNow()
+        };
+        _repository.GetForUpdateAsync(employee.Id, cts.Token).Returns(employee);
+        _clock.Advance(TimeSpan.FromHours(1));
+
+        var result = await _sut.UpdateAsync(
+            employee.Id, new UpdateEmployeeRequest(" New ", "Name", "Lead", 9000, employee.DepartmentId), cts.Token);
+
+        Assert.Equal("New Name", result.FullName);
+        Assert.Equal(_clock.GetUtcNow(), employee.UpdatedAt);
+        await _repository.Received(1).SaveChangesAsync(cts.Token);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenNotFound_ThrowsNotFoundWithoutSaving()
+    {
+        var id = Guid.NewGuid();
+        _repository.GetForUpdateAsync(id, Arg.Any<CancellationToken>()).Returns((Employee?)null);
+        var request = new UpdateEmployeeRequest("A", "B", "C", 1000, Guid.NewGuid());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.UpdateAsync(id, request, CancellationToken.None));
+
+        await _repository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetPageAsync_ForwardsCancellationTokenToRepository()
+    {
+        using var cts = new CancellationTokenSource();
+        _repository.GetPageAsync(1, 20, cts.Token).Returns(new PagedResult<EmployeeResponse>([], 1, 20, 0));
+
+        await _sut.GetPageAsync(1, 20, cts.Token);
+
+        await _repository.Received(1).GetPageAsync(1, 20, cts.Token);
+    }
+}
+```
+
 ## Sebelum memakai contoh pada fitur nyata
 
 - Tambahkan migration untuk constraint/index. Jangan menganggap index sudah ada hanya karena configuration ditulis.
-- Pada boundary persistence, terjemahkan **pelanggaran unique email yang teridentifikasi**
-  menjadi `ConflictException`, termasuk insert bersamaan. Gunakan adapter/provider error
-  metadata proyek; jangan memetakan semua `DbUpdateException` ke 409.
-  Contoh dasar di atas belum menyertakan adapter provider ini: tanpa adapter, race ditolak DB
-  tetapi menjadi 500. Lengkapi pemetaan dan integration test sebelum menyatakan create selesai.
+- Repository contoh menerjemahkan pelanggaran `UX_Employees_Email` di SQL Server menjadi 409,
+  termasuk insert bersamaan. Untuk provider, nama index, atau unique key lain, sesuaikan
+  pemeriksaan metadata error; jangan memetakan semua `DbUpdateException` ke 409.
+  Buktikan dengan integration test concurrent insert pada provider relational yang sebenarnya.
 - Periksa precision/range salary, normalisasi email, ownership/akses Department, dan aturan
   soft-delete sesuai domain. Jangan mengasumsikan identifier yang valid berarti user boleh mengaksesnya.
 - Jika mutasi memerlukan optimistic concurrency, tambahkan concurrency token dan pemetaan

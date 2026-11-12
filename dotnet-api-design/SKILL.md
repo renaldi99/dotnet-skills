@@ -46,14 +46,13 @@ jika pola existing sudah cukup. Jangan muat ulang file yang masih tersedia utuh 
 | Kebutuhan | Baca |
 | :--- | :--- |
 | Membuat/mengubah envelope, domain error, exception handler | [Foundation](references/foundation.md) |
-| Membuat modul baru atau membutuhkan contoh layering | [Module scaffolding](references/module-scaffolding.md) |
+| Membuat modul baru, contoh layering, atau pola unit test | [Module scaffolding](references/module-scaffolding.md) |
 | Membuat aplikasi baru atau mengubah DI/HTTP pipeline/validasi otomatis | [Bootstrap](references/bootstrap.md) |
 | Mengubah query, pagination, uniqueness, relasi, atau bulk operation | [Database performance](references/database-performance.md) |
 | Memasang skill atau memperkuat kepatuhan dengan instruksi host/CI | [Enforcement](references/enforcement.md) |
 
-Skill ini dapat dipasang sendiri. `efcore-pattern`, jika tersedia, hanya perlu diaktifkan
-untuk pekerjaan persistence yang membutuhkan pendalaman; bukan prasyarat atau bacaan wajib.
-Untuk tugas gabungan, G1-G7 tetap berlaku pada kontrak API.
+Jika pengguna meminta skill lain dipakai bersamaan, G1-G7 tetap berlaku pada kontrak API
+dan layering; laporkan konflik aturan, jangan memilih salah satu secara diam-diam.
 
 ## Preflight: semua perubahan kode
 

@@ -17,7 +17,8 @@ Repository ini berisi kumpulan skill modular yang dapat di-load secara *on-deman
 
 ## 🎯 Ringkasan Guardrails Utama
 
-Setiap skill memiliki *core guardrails* sebagai standar proyek. Kepatuhan perlu diperiksa;
+Setiap skill berdiri sendiri dengan *core guardrails* masing-masing dan tidak saling bergantung.
+Untuk memakai lebih dari satu skill, sebutkan skill tersebut secara eksplisit di prompt. Kepatuhan perlu diperiksa;
 instruksi teks saja tidak menjamin AI selalu mengaktifkan skill atau mengikuti semua aturan.
 
 ### 1. `dotnet-api-design`
@@ -27,7 +28,7 @@ dan error handling. Pengecualian HTTP serta perbedaan read-only dan tracked muta
 didefinisikan di sana, bukan diduplikasi di README.
 
 Workflow dipisahkan menjadi **scaffolding**, **maintenance**, dan **review tanpa edit**.
-Template panjang dimuat hanya saat diperlukan. Skill dapat dipasang sendiri tanpa `efcore-pattern`.
+Template panjang dimuat hanya saat diperlukan.
 
 ### 2. `efcore-pattern`
 - **Wajib `.AsNoTracking()`**: Semua operasi pembacaan (GET) wajib menggunakan `.AsNoTracking()` atau proyeksi langsung via `.Select()`.
@@ -119,6 +120,9 @@ bergantung pada host/model; verifikasi skill tersedia dan gunakan pemanggilan ek
 ### Skenario 4: Maintenance tanpa mengubah kontrak
 > *"Gunakan dotnet-api-design untuk memperbaiki validasi endpoint Orders ini. Pertahankan route, schema response, dan versi framework; tambahkan regression test yang relevan."*
 
+### Skenario 5: Menggabungkan dua skill secara eksplisit
+> *"Gunakan dotnet-api-design dan efcore-pattern untuk menambahkan endpoint laporan Orders per bulan. Tambahkan bulk update status via ExecuteUpdateAsync."*
+
 ### Memperkuat kepatuhan aturan
 
 Gunakan [panduan enforcement](./dotnet-api-design/references/enforcement.md) untuk memasang
@@ -133,6 +137,8 @@ Jangan menyalin seluruh template ke instruksi permanen; arahkan ke G1-G7 dan bac
 ```text
 agent-skills/
 ├── README.md                           # Dokumentasi utama dan katalog skill
+├── CHANGELOG.md                        # Riwayat perubahan
+├── AGENTS.md                           # Instruksi maintenance katalog (bukan untuk proyek pemakai)
 ├── .gitignore                          # Aturan ignore file OS dan cache temporary
 │
 ├── dotnet-api-design/                  # Skill Arsitektur RESTful API .NET 10

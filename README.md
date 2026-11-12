@@ -170,8 +170,18 @@ Ingin menambahkan skill baru atau memperbarui panduan yang ada?
    ---
    ```
 4. Dokumentasikan panduan panjang di dalam subfolder `references/`.
-5. Daftarkan skill baru Anda pada tabel di `README.md`.
-6. Ajukan Pull Request.
+5. Pastikan skill berdiri sendiri: jangan menautkan atau mewajibkan skill lain.
+6. Daftarkan skill baru di setiap bagian `README.md` berikut:
+   - [ ] **Katalog Skills**: baris tabel (nama, lingkup, target platform, tautan `SKILL.md`).
+   - [ ] **Ringkasan Guardrails Utama**: subbagian `### N. <nama-skill>` yang merujuk ke
+     `SKILL.md`, bukan menyalin seluruh aturan.
+   - [ ] **Cara Instalasi**: perintah `cp -r` di Opsi 1 dan Opsi 3, serta folder skill di
+     diagram "Catatan Struktur Folder".
+   - [ ] **Contoh Trigger Pemakaian**: minimal satu skenario; tambahkan contoh prompt gabungan
+     bila skill lazim dipakai bersama skill lain.
+   - [ ] **Struktur Repository**: folder skill beserta `SKILL.md` dan `references/` bila ada.
+7. Catat penambahan di `CHANGELOG.md` bagian `[Unreleased]` → `Added`.
+8. Ajukan Pull Request.
 
 ---
 

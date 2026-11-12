@@ -20,6 +20,8 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
   helper yang tidak didefinisikan dan menangkap `DbUpdateException` di Service.
 
 ### Changed
+- Panduan kontribusi README kini berisi checklist seluruh bagian yang wajib diperbarui
+  saat menambah skill baru; `AGENTS.md` merujuk checklist tersebut.
 - Pulihkan diagram struktur project di referensi `module-scaffolding.md`, selaras
   dengan path contoh dan tanpa menambah konteks di file utama skill.
 - Restrukturisasi `dotnet-api-design`: aturan G1-G7 dan workflow tetap di `SKILL.md`;

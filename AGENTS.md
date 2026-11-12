@@ -24,6 +24,11 @@ yang memasang skill. Anchor untuk proyek pemakai ada di
 - Contoh harus bisa dikompilasi secara masuk akal: `using` lengkap, tidak ada helper yang
   dirujuk tanpa definisi, dan unit test benar-benar meng-assert (bukan memanggil mock).
 
+## Saat menambah skill baru
+
+Ikuti checklist di bagian "Berkontribusi" pada `README.md`; semua bagian README yang
+tercantum di sana wajib diperbarui, bukan hanya tabel katalog.
+
 ## Sebelum menyatakan selesai
 
 1. Periksa tautan relatif di `SKILL.md`, README, dan CHANGELOG masih valid.

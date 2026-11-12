@@ -16,8 +16,8 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 
 ### Fixed
 - Repository Employees kini menerjemahkan pelanggaran index `UX_Employees_Email` (SQL Server
-  2601/2627) menjadi `ConflictException` di boundary persistence; contoh sebelumnya merujuk
-  helper yang tidak didefinisikan dan menangkap `DbUpdateException` di Service.
+  2601/2627) menjadi `ConflictException` di boundary persistence; sebelumnya contoh belum
+  menyertakan adapter ini sehingga insert email duplikat secara bersamaan menjadi 500.
 
 ### Changed
 - Panduan kontribusi README kini berisi checklist seluruh bagian yang wajib diperbarui

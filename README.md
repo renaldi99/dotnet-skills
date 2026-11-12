@@ -105,9 +105,11 @@ Jika Anda menggunakan **Google Antigravity** dan ingin skill ini aktif di semua 
 
 ```bash
 # Antigravity Global Customizations
+git clone --depth 1 https://github.com/renaldi99/dotnet-skills.git /tmp/dotnet-skills
 mkdir -p ~/.gemini/config/skills
-cp -r dotnet-api-design ~/.gemini/config/skills/
-cp -r efcore-pattern ~/.gemini/config/skills/
+cp -r /tmp/dotnet-skills/dotnet-api-design ~/.gemini/config/skills/
+cp -r /tmp/dotnet-skills/efcore-pattern ~/.gemini/config/skills/
+rm -rf /tmp/dotnet-skills
 ```
 
 ---

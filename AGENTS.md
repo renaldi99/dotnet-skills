@@ -17,8 +17,9 @@ yang memasang skill. Anchor untuk proyek pemakai ada di
   panjang masuk `references/` dan didaftarkan di tabel "Pilih referensi sesuai tugas".
 - Frontmatter wajib memiliki `name` (sama dengan nama folder) dan `description` yang memuat
   trigger serta lingkup.
-- Contoh antar-file harus konsisten: nama tipe, namespace, signature, bentuk `PagedResult<T>`,
-  kode error, dan path di diagram struktur. Ubah semua tempat yang terdampak sekaligus.
+- Contoh antar-file di dalam satu skill harus konsisten: nama tipe, namespace, signature,
+  bentuk `PagedResult<T>`, kode error, dan path di diagram struktur. Ubah semua tempat yang
+  terdampak sekaligus. Konsistensi ini tidak berlaku lintas skill.
 - Jangan menambah dependency pada contoh (library assertion, validasi, mapping) kecuali
   dibutuhkan untuk menunjukkan aturan; sebutkan alternatif "ikuti proyek existing".
 - Contoh harus bisa dikompilasi secara masuk akal: `using` lengkap, tidak ada helper yang

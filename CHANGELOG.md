@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - Service unit test examples (xUnit, NSubstitute, FakeTimeProvider) for email conflicts,
   audit timestamps, not found, and `CancellationToken` propagation.
 - `AGENTS.md` with maintenance instructions for this skill catalog repository.
+- `LICENSE` file with the MIT License text referenced by the README.
+- README usage scenario showing how to combine two skills explicitly in one prompt.
 
 ### Fixed
 - The Employees repository now translates `UX_Employees_Email` index violations (SQL Server
@@ -23,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - Translate both skills, their references, README, AGENTS.md, and this changelog to English.
   Rules, G1-G7 IDs, structure, and code behavior are unchanged; message strings in code examples
   are now in English.
+- README installation guide now uses the real repository URL (`renaldi99/dotnet-skills`),
+  documents optional `--branch <tag>` pinning to a release, and adds the missing clone step
+  to the global install (Option 3).
+- README links each supported AI coding assistant to its product page.
 - The README contributing guide now has a checklist of every section to update
   when adding a new skill; `AGENTS.md` points to that checklist.
 - Restore the project structure diagram in the `module-scaffolding.md` reference, aligned

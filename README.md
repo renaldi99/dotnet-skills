@@ -156,6 +156,7 @@ dotnet-skills/
 ├── README.md                           # Main documentation and skill catalog
 ├── CHANGELOG.md                        # Change history
 ├── AGENTS.md                           # Catalog maintenance instructions (not for consuming projects)
+├── LICENSE                             # MIT License
 ├── .gitignore                          # Ignore rules for OS files and temporary caches
 │
 ├── dotnet-api-design/                  # .NET 10 RESTful API architecture skill

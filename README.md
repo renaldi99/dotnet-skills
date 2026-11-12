@@ -66,7 +66,7 @@ rm -rf /tmp/dotnet-skills
 ```
 
 The command above fetches the latest version from the default branch. For a specific release,
-add `--branch <tag>` to `git clone` (for example `--branch v1.1.0`).
+add `--branch <tag>` to `git clone` (for example `--branch v2.1.0`).
 
 > **Folder Structure in Your Project:**
 >

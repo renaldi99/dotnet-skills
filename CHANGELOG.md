@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-12
+
+### Changed
+- Translate both skills, their references, README, AGENTS.md, and this changelog to English.
+  Rules, G1-G7 IDs, structure, and code behavior are unchanged; message strings in code examples
+  are now in English. Use `v2.0.0` for the Indonesian version.
+
+---
+
+## [2.0.0] - 2026-11-12
+
+### ⚠ Breaking changes
+- G1: controllers accept `CancellationToken` without `= default`.
+- G2: automatic validation errors use the `ApiResponse` envelope; file/stream, HEAD,
+  204/304, health check, and OpenAPI responses are no longer wrapped.
+- G5: new list endpoints must be bounded with a unique ordering.
+- `dotnet-api-design` content moved from `SKILL.md` into `references/`;
+  skills no longer link to each other.
+
 ### Added
 - `PUT` (Update) endpoint example in the Employees module with the `UpdateEmployeeRequest` DTO.
 - Service unit test examples (xUnit, NSubstitute, FakeTimeProvider) for email conflicts,
@@ -22,9 +41,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
   include this adapter, so concurrent duplicate email inserts resulted in 500.
 
 ### Changed
-- Translate both skills, their references, README, AGENTS.md, and this changelog to English.
-  Rules, G1-G7 IDs, structure, and code behavior are unchanged; message strings in code examples
-  are now in English.
 - README installation guide now uses the real repository URL (`renaldi99/dotnet-skills`),
   documents optional `--branch <tag>` pinning to a release, and adds the missing clone step
   to the global install (Option 3).

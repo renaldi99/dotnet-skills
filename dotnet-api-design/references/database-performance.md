@@ -1,25 +1,25 @@
 # Database performance
 
-Baca hanya saat mengubah repository/query. G4-G5 di SKILL.md adalah sumber aturan;
-contoh berikut adalah fragmen untuk diadaptasi pada entity/provider proyek, bukan file aplikasi lengkap.
+Read only when changing repositories/queries. G4-G5 in SKILL.md are the source of rules;
+the examples below are fragments to adapt to the project's entities/provider, not complete application files.
 
-## Keputusan query
+## Query decisions
 
-| Kebutuhan | Pilihan |
+| Need | Choice |
 | :--- | :--- |
-| Read-only entity | `AsNoTracking()`; proyeksi DTO/scalar tanpa entity juga tidak tracked. |
-| Load untuk mutasi | Query tracked yang eksplisit, ubah field yang diperlukan, lalu `SaveChangesAsync(token)`. Jangan `Update` seluruh detached graph tanpa kebutuhan. |
-| Relasi/N+1 | Proyeksi `Select`, SQL join, atau eager loading. Jangan query per item dalam loop. |
-| Beberapa sibling collection | Pertimbangkan `AsSplitQuery()` setelah menilai cartesian explosion, roundtrip, dan konsistensi; bukan default untuk setiap Include. |
-| Existence | `AnyAsync(token)`, bukan `CountAsync() > 0`. Bentuk SQL bergantung provider; tidak selalu literal `IF EXISTS`. |
-| List | Filter/order/pagination sebelum materialisasi, batas page size, dan urutan unik. Gunakan keyset/cursor untuk traversal besar bila sesuai kontrak. |
-| Bulk update/delete | `ExecuteUpdateAsync`/`ExecuteDeleteAsync` bila invariant, audit, concurrency, dan transaksi tetap terpenuhi. Fitur ini tersedia sejak EF Core 7, bukan khusus .NET 10. |
+| Read-only entity | `AsNoTracking()`; DTO/scalar projections without entities are not tracked either. |
+| Load for mutation | An explicit tracked query, change the needed fields, then `SaveChangesAsync(token)`. Do not `Update` an entire detached graph without need. |
+| Relationships/N+1 | `Select` projection, SQL join, or eager loading. Do not query per item in a loop. |
+| Several sibling collections | Consider `AsSplitQuery()` after weighing cartesian explosion, roundtrips, and consistency; it is not the default for every Include. |
+| Existence | `AnyAsync(token)`, not `CountAsync() > 0`. The SQL shape depends on the provider; it is not always a literal `IF EXISTS`. |
+| List | Filter/order/paginate before materialization, with a page size limit and a unique ordering. Use keyset/cursor for large traversals when the contract allows. |
+| Bulk update/delete | `ExecuteUpdateAsync`/`ExecuteDeleteAsync` when invariants, auditing, concurrency, and transactions are still satisfied. Available since EF Core 7, not specific to .NET 10. |
 
-## Join di database dan DTO projection
+## Database joins and DTO projection
 
-Misalnya model memiliki `Employee.DepartmentId` dan `Department.Id/Name`.
-Gunakan DTO khusus summary, jangan memanggil constructor `EmployeeResponse` dengan bentuk berbeda.
-Contoh menggunakan `offset` dan `pageSize` yang sudah divalidasi seperti bagian pagination.
+Suppose the model has `Employee.DepartmentId` and `Department.Id/Name`.
+Use a dedicated summary DTO; do not call the `EmployeeResponse` constructor with a different shape.
+The example uses `offset` and `pageSize` already validated as in the pagination section.
 
 ```csharp
 public sealed record EmployeeDepartmentSummary(
@@ -40,15 +40,15 @@ var items = await context.Set<Employee>()
     .ToListAsync(cancellationToken);
 ```
 
-Join ini inner join. Jangan mengasumsikan navigation projection selalu menghasilkan LEFT JOIN;
-required/optional relationship dan provider menentukan terjemahan SQL.
-Jangan me-load kedua tabel lalu melakukan LINQ Join di aplikasi. Materialisasi relasi oleh
-EF split query atau Dapper multi-mapping bukan larangan yang sama dengan join dua tabel tanpa batas di RAM.
+This is an inner join. Do not assume a navigation projection always produces a LEFT JOIN;
+required/optional relationships and the provider determine the SQL translation.
+Do not load both tables and then perform a LINQ Join in the application. Materializing relationships via
+EF split queries or Dapper multi-mapping is not the same prohibition as an unbounded in-memory join of two tables.
 
-## Dapper: projection SQL berparameter
+## Dapper: parameterized SQL projection
 
-Gunakan DTO summary di atas. Contoh SQL Server ini mempertahankan nama kolom yang cocok
-dengan constructor DTO dan token melalui `CommandDefinition`. Sesuaikan dialek untuk provider lain.
+Use the summary DTO above. This SQL Server example keeps column names that match
+the DTO constructor and passes the token via `CommandDefinition`. Adjust the dialect for other providers.
 
 ```csharp
 const string sql = """
@@ -66,31 +66,31 @@ var items = await connection.QueryAsync<EmployeeDepartmentSummary>(
         cancellationToken: cancellationToken));
 ```
 
-Untuk one-to-many dengan result set terpisah, pertimbangkan `QueryMultipleAsync`.
-Batasi child collection, dispose `GridReader`, dan jangan menggabungkan hasil parsial
-seolah-olah entity lengkap. Untuk multi-mapping, periksa `splitOn` dan kolom identity setiap tipe.
+For one-to-many with separate result sets, consider `QueryMultipleAsync`.
+Bound child collections, dispose the `GridReader`, and do not combine partial results
+as if they were complete entities. For multi-mapping, check `splitOn` and the identity column of each type.
 
-## Pagination dan uniqueness
+## Pagination and uniqueness
 
-- Tolak `page < 1`, `pageSize` di luar batas kebijakan, dan offset yang melebihi rentang integer.
-  Jangan diam-diam clamp input invalid. Contoh modul memakai default 20 dan maksimum 100.
-- Order harus unik: misalnya `OrderByDescending(CreatedAt).ThenBy(Id)`.
-  Urutan unik tidak menghilangkan pergeseran offset ketika data berubah; gunakan cursor jika dibutuhkan.
-- `CountAsync` tetap tepat untuk total count. Evaluasi biaya query count dan konsistensi snapshot
-  terhadap kebutuhan endpoint; jangan menghitung total jika kontrak tidak memerlukannya.
-- Normalisasi key sebelum pre-check **dan** insert/update dengan fungsi yang sama.
-  Hindari `ToLower()` pada kolom query yang menghambat pemakaian index.
-- Uniqueness harus dijamin constraint/index database, dengan migration dan kebijakan collation
-  yang sesuai. Pre-check saja tidak aman terhadap concurrent insert.
-- Terjemahkan hanya pelanggaran constraint yang dikenali menjadi konflik domain. Error koneksi,
-  timeout, FK, atau constraint lain tidak boleh disamarkan sebagai duplicate email.
+- Reject `page < 1`, `pageSize` outside the policy limits, and offsets beyond the integer range.
+  Do not silently clamp invalid input. The module example uses a default of 20 and a maximum of 100.
+- Ordering must be unique: for example `OrderByDescending(CreatedAt).ThenBy(Id)`.
+  A unique ordering does not remove offset drift when data changes; use a cursor if needed.
+- `CountAsync` remains correct for the total count. Weigh the cost of the count query and snapshot consistency
+  against the endpoint's needs; do not compute a total if the contract does not require it.
+- Normalize keys before the pre-check **and** the insert/update with the same function.
+  Avoid `ToLower()` on query columns, which prevents index usage.
+- Uniqueness must be guaranteed by a database constraint/index, with a migration and an appropriate
+  collation policy. A pre-check alone is not safe against concurrent inserts.
+- Translate only recognized constraint violations into domain conflicts. Connection errors,
+  timeouts, FK violations, or other constraints must not be disguised as a duplicate email.
 
-## Split query dan bulk operation
+## Split queries and bulk operations
 
-Split query menambah roundtrip dan dapat membaca snapshot berbeda antar-query saat data berubah.
-Ukur SQL/query plan dan pertimbangkan transaksi/isolation bila konsistensi dibutuhkan.
+Split queries add roundtrips and may read different snapshots across queries while data changes.
+Measure the SQL/query plan and consider transactions/isolation when consistency is required.
 
-Bulk operation berjalan langsung tanpa change tracker atau `SaveChanges` interceptor:
+Bulk operations run directly, without the change tracker or `SaveChanges` interceptors:
 
 ```csharp
 var now = timeProvider.GetUtcNow();
@@ -101,13 +101,13 @@ var affected = await context.Set<Employee>()
         .SetProperty(employee => employee.UpdatedAt, now), cancellationToken);
 ```
 
-Tetapkan hasil bisnis berdasarkan `affected`. Tambahkan filter concurrency jika diperlukan.
-Jangan mengharapkan `SaveChanges` berikutnya menerapkan bulk operation; jangan memakai entity
-tracked yang sudah stale tanpa reload/clear yang disengaja. Beberapa bulk statement tidak
-otomatis menjadi satu transaksi; bungkus eksplisit jika harus atomik.
+Decide the business outcome based on `affected`. Add a concurrency filter if needed.
+Do not expect a later `SaveChanges` to apply the bulk operation; do not use stale tracked
+entities without a deliberate reload/clear. Multiple bulk statements do not
+automatically form one transaction; wrap them explicitly if they must be atomic.
 
-## Bukti yang relevan
+## Relevant evidence
 
-Untuk perubahan query, periksa SQL, jumlah roundtrip, jumlah baris/kolom, dan query plan
-sesuai skala kasus. Uji translation, constraint, dan transaksi dengan provider relational
-yang kompatibel; EF InMemory tidak membuktikan perilaku tersebut.
+For query changes, check the SQL, roundtrip count, row/column counts, and the query plan
+at the scale of the case. Test translation, constraints, and transactions with a compatible
+relational provider; EF InMemory does not prove that behavior.

@@ -1,15 +1,15 @@
 # Module scaffolding: Employees
 
-Baca untuk modul baru atau contoh layering, bukan untuk setiap bug fix.
-Contoh memakai Foundation, SQL Server, dan implicit usings/nullable enabled.
-Setiap heading path adalah file terpisah; jangan menempelkan seluruh dokumen ke satu file.
-Nama, kebijakan email, batas halaman, dan kontrak berikut adalah contoh untuk proyek baru.
-Jangan mengganti kontrak existing dengan contoh ini.
+Read for new modules or layering examples, not for every bug fix.
+The example uses Foundation, SQL Server, and implicit usings/nullable enabled.
+Each heading path is a separate file; do not paste the whole document into one file.
+The names, email policy, page limits, and contracts below are examples for new projects.
+Do not replace existing contracts with this example.
 
-## Struktur project
+## Project structure
 
-Modul disusun vertikal di `Modules/`, sedangkan fondasi dipakai bersama melalui
-`Common/` dan `Data/`. Diagram berikut mengikuti path file pada contoh:
+Modules are organized vertically under `Modules/`, while the foundation is shared through
+`Common/` and `Data/`. The diagram below follows the file paths in the example:
 
 ```text
 MyService.Api/
@@ -18,15 +18,15 @@ MyService.Api/
 |   |   |-- Controllers/
 |   |   |   `-- EmployeesController.cs
 |   |   |-- Services/
-|   |   |   `-- EmployeeService.cs          # Termasuk IEmployeeService
+|   |   |   `-- EmployeeService.cs          # Includes IEmployeeService
 |   |   |-- Repositories/
-|   |   |   `-- EmployeeRepository.cs       # Termasuk IEmployeeRepository
+|   |   |   `-- EmployeeRepository.cs       # Includes IEmployeeRepository
 |   |   |-- Dtos/
 |   |   |   `-- EmployeeDtos.cs             # Create, Update, Response, PageRequest
 |   |   |-- Entities/
 |   |   |   |-- Employee.cs
 |   |   |   `-- EmployeeConfiguration.cs
-|   |   |-- Validators/                    # Opsional, jika memakai validator terpisah
+|   |   |-- Validators/                    # Optional, when using separate validators
 |   |   `-- EmployeesModuleExtensions.cs
 |   `-- {NextModule}/
 |-- Common/
@@ -37,7 +37,7 @@ MyService.Api/
 |   |   |-- ErrorCode.cs
 |   |   `-- ErrorCodeExtensions.cs
 |   |-- Exceptions/
-|   |   `-- AppException.cs                # Termasuk turunan exception domain
+|   |   `-- AppException.cs                # Includes domain exception subclasses
 |   `-- Handlers/
 |       `-- GlobalExceptionHandler.cs
 |-- Data/
@@ -50,15 +50,15 @@ MyService.Api.Tests/
         `-- EmployeeServiceTests.cs        # Unit test xUnit + NSubstitute + FakeTimeProvider
 ```
 
-Kode `Common/` tersedia di `foundation.md`, dan `Program.cs` di `bootstrap.md`;
-baca hanya bila perlu membuat atau mengubah bagian tersebut. Folder `Validators/`
-tidak diperlukan untuk contoh attribute validation di bawah. Interface dan implementasi
-digabung dalam contoh agar ringkas; ikuti konvensi pemisahan file proyek existing.
+The `Common/` code is in `foundation.md`, and `Program.cs` is in `bootstrap.md`;
+read them only when you need to create or change those parts. The `Validators/` folder
+is not needed for the attribute validation example below. Interfaces and implementations
+are combined in the example for brevity; follow the existing project's file-splitting convention.
 
 ## Modules/Employees/Dtos/EmployeeDtos.cs
 
-Validasi attribute pada positional record diletakkan pada parameter constructor.
-Jika proyek memakai FluentValidation, gunakan mekanisme itu secara konsisten.
+Validation attributes on positional records go on the constructor parameters.
+If the project uses FluentValidation, use that mechanism consistently.
 
 ```csharp
 using System.ComponentModel.DataAnnotations;
@@ -113,9 +113,9 @@ public sealed class Employee
 
 ## Modules/Employees/Entities/EmployeeConfiguration.cs
 
-Email disimpan dalam bentuk normalisasi dan unik termasuk baris soft-deleted.
-Jika reuse email setelah delete diperlukan, ubah kebijakan/constraint secara eksplisit.
-`DepartmentId` di sini hanya identifier; tambahkan FK atau validasi lintas modul sesuai model nyata.
+Email is stored normalized and is unique, including soft-deleted rows.
+If email reuse after deletion is required, change the policy/constraint explicitly.
+`DepartmentId` here is only an identifier; add an FK or cross-module validation according to the real model.
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
@@ -159,12 +159,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
 ## Modules/Employees/Repositories/EmployeeRepository.cs
 
-Read-only query tidak tracked; load untuk mutasi memiliki nama terpisah.
-`Add` hanya melakukan tracking secara sinkron. Service menentukan kapan `SaveChangesAsync`
-dipanggil; tidak perlu `Task.CompletedTask` atau method async palsu untuk `Update`.
-Pagination divalidasi juga di repository agar caller non-HTTP tidak melewati batas.
-`SaveChangesAsync` adalah boundary persistence: hanya pelanggaran index `UX_Employees_Email`
-yang dikenali yang diterjemahkan menjadi `ConflictException`; error database lain tetap 500.
+Read-only queries are not tracked; loads for mutation have a separate name.
+`Add` only starts tracking synchronously. The service decides when `SaveChangesAsync`
+is called; no `Task.CompletedTask` or fake async method is needed for `Update`.
+Pagination is also validated in the repository so non-HTTP callers cannot exceed the limits.
+`SaveChangesAsync` is the persistence boundary: only recognized `UX_Employees_Email`
+index violations are translated into `ConflictException`; other database errors stay 500.
 
 ```csharp
 using Microsoft.Data.SqlClient;
@@ -194,7 +194,7 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         int page, int pageSize, CancellationToken cancellationToken = default)
     {
         if (page < 1 || pageSize is < 1 or > 100 || (long)(page - 1) * pageSize > int.MaxValue)
-            throw new ValidationException(new { Pagination = "Page/pageSize di luar batas." });
+            throw new ValidationException(new { Pagination = "Page/pageSize out of range." });
 
         var query = context.Set<Employee>().AsNoTracking().Where(employee => employee.IsActive);
         var total = await query.CountAsync(cancellationToken);
@@ -229,12 +229,12 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         }
         catch (DbUpdateException exception) when (IsDuplicateEmail(exception))
         {
-            throw new ConflictException(ErrorCode.EntityAlreadyExists, "Email sudah terdaftar.");
+            throw new ConflictException(ErrorCode.EntityAlreadyExists, "Email is already registered.");
         }
     }
 
-    // SQL Server: 2601 = duplicate key pada unique index, 2627 = unique constraint.
-    // Provider lain memiliki metadata error berbeda; sesuaikan, jangan memetakan semua DbUpdateException.
+    // SQL Server: 2601 = duplicate key in a unique index, 2627 = unique constraint.
+    // Other providers expose different error metadata; adapt this, do not map every DbUpdateException.
     private static bool IsDuplicateEmail(DbUpdateException exception) =>
         exception.InnerException is SqlException { Number: 2601 or 2627 } sqlException
         && sqlException.Message.Contains("UX_Employees_Email", StringComparison.OrdinalIgnoreCase);
@@ -243,9 +243,9 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
 
 ## Modules/Employees/Services/EmployeeService.cs
 
-Boundary HTTP memvalidasi DTO sebelum service dipanggil; caller non-HTTP juga wajib
-melakukan validasi input. Service tetap memvalidasi invariant bisnis.
-Pre-check email hanya memperbaiki pesan error, **bukan pengganti unique constraint**.
+The HTTP boundary validates DTOs before the service is called; non-HTTP callers must also
+validate input. The service still validates business invariants.
+The email pre-check only improves the error message; it is **not a replacement for the unique constraint**.
 
 ```csharp
 using MyService.Api.Common.Errors;
@@ -284,11 +284,11 @@ public sealed class EmployeeService(
         CreateEmployeeRequest request, CancellationToken cancellationToken = default)
     {
         if (request.Salary <= 0 || request.DepartmentId == Guid.Empty)
-            throw new AppException(ErrorCode.InvalidBusinessRule, "Gaji dan departemen harus valid.");
+            throw new AppException(ErrorCode.InvalidBusinessRule, "Salary and department must be valid.");
 
         var email = request.Email.Trim().ToUpperInvariant();
         if (await repository.ExistsByEmailAsync(email, cancellationToken))
-            throw new ConflictException(ErrorCode.EntityAlreadyExists, "Email sudah terdaftar.");
+            throw new ConflictException(ErrorCode.EntityAlreadyExists, "Email is already registered.");
 
         var employee = new Employee
         {
@@ -306,7 +306,7 @@ public sealed class EmployeeService(
         Guid id, UpdateEmployeeRequest request, CancellationToken cancellationToken = default)
     {
         if (request.Salary <= 0 || request.DepartmentId == Guid.Empty)
-            throw new AppException(ErrorCode.InvalidBusinessRule, "Gaji dan departemen harus valid.");
+            throw new AppException(ErrorCode.InvalidBusinessRule, "Salary and department must be valid.");
 
         var employee = await repository.GetForUpdateAsync(id, cancellationToken)
             ?? throw new NotFoundException(ErrorCode.EntityNotFound);
@@ -424,11 +424,11 @@ public static class EmployeesModuleExtensions
 
 ## MyService.Api.Tests/Modules/Employees/EmployeeServiceTests.cs
 
-Unit test Service memakai **xUnit**, **NSubstitute**, dan **FakeTimeProvider**
-(`Microsoft.Extensions.TimeProvider.Testing`). Jika proyek sudah memakai library assertion
-atau mocking lain, ikuti proyek; jangan menambah dependency hanya demi contoh ini.
-Unit test ini tidak membuktikan envelope HTTP, validasi model, maupun unique constraint;
-kebutuhan tersebut diuji dengan integration test (lihat bagian akhir).
+Service unit tests use **xUnit**, **NSubstitute**, and **FakeTimeProvider**
+(`Microsoft.Extensions.TimeProvider.Testing`). If the project already uses other assertion
+or mocking libraries, follow the project; do not add dependencies just for this example.
+These unit tests do not prove the HTTP envelope, model validation, or the unique constraint;
+those are covered by integration tests (see the last section).
 
 ```csharp
 using Microsoft.Extensions.Logging.Abstractions;
@@ -541,18 +541,18 @@ public sealed class EmployeeServiceTests
 }
 ```
 
-## Sebelum memakai contoh pada fitur nyata
+## Before using the example in a real feature
 
-- Tambahkan migration untuk constraint/index. Jangan menganggap index sudah ada hanya karena configuration ditulis.
-- Repository contoh menerjemahkan pelanggaran `UX_Employees_Email` di SQL Server menjadi 409,
-  termasuk insert bersamaan. Untuk provider, nama index, atau unique key lain, sesuaikan
-  pemeriksaan metadata error; jangan memetakan semua `DbUpdateException` ke 409.
-  Buktikan dengan integration test concurrent insert pada provider relational yang sebenarnya.
-- Periksa precision/range salary, normalisasi email, ownership/akses Department, dan aturan
-  soft-delete sesuai domain. Jangan mengasumsikan identifier yang valid berarti user boleh mengaksesnya.
-- Jika mutasi memerlukan optimistic concurrency, tambahkan concurrency token dan pemetaan
-  `DbUpdateConcurrencyException` yang sesuai kontrak. Contoh belum menetapkan kebijakan konflik edit.
-- Count dan page adalah dua query; tidak menjamin snapshot yang sama saat concurrent write.
-  Gunakan isolation/kontrak yang sesuai jika konsistensi snapshot diperlukan.
-- Uji invalid DTO/JSON, halaman nol/terlalu besar/overflow, not found, timestamp terkontrol,
-  token diteruskan, dan duplicate email concurrent dengan provider relational yang sebenarnya.
+- Add a migration for constraints/indexes. Do not assume an index exists just because the configuration was written.
+- The example repository translates SQL Server `UX_Employees_Email` violations into 409,
+  including concurrent inserts. For other providers, index names, or unique keys, adapt
+  the error metadata check; do not map every `DbUpdateException` to 409.
+  Prove it with a concurrent insert integration test on the real relational provider.
+- Check salary precision/range, email normalization, Department ownership/access, and
+  soft-delete rules according to the domain. Do not assume a valid identifier means the user may access it.
+- If mutations need optimistic concurrency, add a concurrency token and a
+  `DbUpdateConcurrencyException` mapping that fits the contract. The example does not define an edit conflict policy yet.
+- Count and page are two queries; they do not guarantee the same snapshot under concurrent writes.
+  Use an appropriate isolation level/contract if snapshot consistency is required.
+- Test invalid DTO/JSON, zero/too large/overflowing pages, not found, controlled timestamps,
+  forwarded tokens, and concurrent duplicate emails on the real relational provider.

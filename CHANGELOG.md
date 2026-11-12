@@ -9,6 +9,8 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 ## [Unreleased]
 
 ### Changed
+- Pulihkan diagram struktur project di referensi `module-scaffolding.md`, selaras
+  dengan path contoh dan tanpa menambah konteks di file utama skill.
 - Restrukturisasi `dotnet-api-design`: aturan G1-G7 dan workflow tetap di `SKILL.md`;
   fondasi, contoh modul, bootstrap, dan enforcement dipindahkan ke referensi on-demand.
 - Tambahkan trigger dan workflow maintenance/bug fix dengan perlindungan kontrak existing,

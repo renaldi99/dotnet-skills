@@ -6,6 +6,50 @@ Setiap heading path adalah file terpisah; jangan menempelkan seluruh dokumen ke 
 Nama, kebijakan email, batas halaman, dan kontrak berikut adalah contoh untuk proyek baru.
 Jangan mengganti kontrak existing dengan contoh ini.
 
+## Struktur project
+
+Modul disusun vertikal di `Modules/`, sedangkan fondasi dipakai bersama melalui
+`Common/` dan `Data/`. Diagram berikut mengikuti path file pada contoh:
+
+```text
+MyService.Api/
+|-- Modules/
+|   |-- Employees/
+|   |   |-- Controllers/
+|   |   |   `-- EmployeesController.cs
+|   |   |-- Services/
+|   |   |   `-- EmployeeService.cs          # Termasuk IEmployeeService
+|   |   |-- Repositories/
+|   |   |   `-- EmployeeRepository.cs       # Termasuk IEmployeeRepository
+|   |   |-- Dtos/
+|   |   |   `-- EmployeeDtos.cs
+|   |   |-- Entities/
+|   |   |   |-- Employee.cs
+|   |   |   `-- EmployeeConfiguration.cs
+|   |   |-- Validators/                    # Opsional, jika memakai validator terpisah
+|   |   `-- EmployeesModuleExtensions.cs
+|   `-- {NextModule}/
+|-- Common/
+|   |-- Models/
+|   |   |-- ApiResponse.cs
+|   |   `-- PagedResult.cs
+|   |-- Errors/
+|   |   |-- ErrorCode.cs
+|   |   `-- ErrorCodeExtensions.cs
+|   |-- Exceptions/
+|   |   `-- AppException.cs                # Termasuk turunan exception domain
+|   `-- Handlers/
+|       `-- GlobalExceptionHandler.cs
+|-- Data/
+|   `-- AppDbContext.cs
+`-- Program.cs
+```
+
+Kode `Common/` tersedia di `foundation.md`, dan `Program.cs` di `bootstrap.md`;
+baca hanya bila perlu membuat atau mengubah bagian tersebut. Folder `Validators/`
+tidak diperlukan untuk contoh attribute validation di bawah. Interface dan implementasi
+digabung dalam contoh agar ringkas; ikuti konvensi pemisahan file proyek existing.
+
 ## Modules/Employees/Dtos/EmployeeDtos.cs
 
 Validasi attribute pada positional record diletakkan pada parameter constructor.

@@ -8,18 +8,37 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-12
+
+### ⚠ Breaking changes
+
+- G1: Controller menerima `CancellationToken` tanpa `= default`.
+- G2: Error validasi otomatis memakai envelope `ApiResponse`; response file/stream, HEAD,
+  204/304, health check, dan dokumen OpenAPI tidak lagi dibungkus envelope.
+- G5: List endpoint baru wajib dibatasi dengan pengurutan unik.
+- Isi `dotnet-api-design` dipindahkan dari `SKILL.md` ke `references/`; skill tidak lagi saling menautkan.
+
 ### Added
+
+- File `LICENSE` (MIT).
 - Contoh endpoint `PUT` (Update) pada modul Employees beserta DTO `UpdateEmployeeRequest`.
 - Contoh unit test Service (xUnit, NSubstitute, FakeTimeProvider) untuk konflik email,
   audit timestamp, not found, dan propagasi `CancellationToken`.
 - `AGENTS.md` berisi instruksi maintenance untuk repository katalog skill ini.
+- Skenario README yang menunjukkan cara menggabungkan dua skill secara eksplisit dalam satu prompt.
 
 ### Fixed
+
 - Repository Employees kini menerjemahkan pelanggaran index `UX_Employees_Email` (SQL Server
   2601/2627) menjadi `ConflictException` di boundary persistence; sebelumnya contoh belum
   menyertakan adapter ini sehingga insert email duplikat secara bersamaan menjadi 500.
 
 ### Changed
+
+- Panduan instalasi README kini memakai URL repository yang benar (`renaldi99/dotnet-skills`),
+  mendokumentasikan opsi `--branch <tag>` untuk memakai rilis tertentu, dan menambahkan langkah
+  clone pada instalasi global (Opsi 3).
+- README menautkan setiap AI coding assistant yang didukung ke halaman produknya.
 - Panduan kontribusi README kini berisi checklist seluruh bagian yang wajib diperbarui
   saat menambah skill baru; `AGENTS.md` merujuk checklist tersebut.
 - Pulihkan diagram struktur project di referensi `module-scaffolding.md`, selaras
@@ -42,6 +61,7 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 ## [1.0.0] - 2026-11-11
 
 ### Added
+
 - **Skill `dotnet-api-design`** ([`dotnet-api-design/SKILL.md`](./dotnet-api-design/SKILL.md)):
   - Standar perancangan, scaffolding, dan refactoring RESTful API pada **.NET 10 (C# 14)** berbasis arsitektur **Modular Monolith**.
   - **7 Core Guardrails**:
@@ -70,4 +90,3 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 - **Dokumentasi & Repository Setup**:
   - `README.md` komprehensif berisi katalog skill, ringkasan guardrails, 3 opsi instalasi (Workspace, Git Submodule, Global Antigravity), dan contoh prompt aktivasi.
   - `.gitignore` komprehensif mencakup sistem operasi, IDE, cache AI/scratch, dan build artifacts .NET.
-

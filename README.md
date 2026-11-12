@@ -66,7 +66,7 @@ rm -rf /tmp/dotnet-skills
 ```
 
 Perintah di atas mengambil versi terbaru dari branch default. Untuk versi rilis tertentu,
-tambahkan `--branch <tag>` pada `git clone` (misalnya `--branch v1.1.0`).
+tambahkan `--branch <tag>` pada `git clone` (misalnya `--branch v2.0.0`).
 
 > **Catatan Struktur Folder di Project Anda:**
 >

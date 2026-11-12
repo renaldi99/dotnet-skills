@@ -1,193 +1,113 @@
-# Database Performance Reference (.NET 10 / EF Core & Dapper)
+# Database performance
 
-Petunjuk teknis dan aturan penulisan query database performa tinggi untuk agen AI. Buka dokumen ini saat merancang query repository, menangani data berelasi, melakukan optimasi pembacaan, atau menangani operasi masal (bulk).
+Baca hanya saat mengubah repository/query. G4-G5 di SKILL.md adalah sumber aturan;
+contoh berikut adalah fragmen untuk diadaptasi pada entity/provider proyek, bukan file aplikasi lengkap.
 
----
+## Keputusan query
 
-## 1. Quick Decision Matrix (Diagnosa & Solusi Cepat)
+| Kebutuhan | Pilihan |
+| :--- | :--- |
+| Read-only entity | `AsNoTracking()`; proyeksi DTO/scalar tanpa entity juga tidak tracked. |
+| Load untuk mutasi | Query tracked yang eksplisit, ubah field yang diperlukan, lalu `SaveChangesAsync(token)`. Jangan `Update` seluruh detached graph tanpa kebutuhan. |
+| Relasi/N+1 | Proyeksi `Select`, SQL join, atau eager loading. Jangan query per item dalam loop. |
+| Beberapa sibling collection | Pertimbangkan `AsSplitQuery()` setelah menilai cartesian explosion, roundtrip, dan konsistensi; bukan default untuk setiap Include. |
+| Existence | `AnyAsync(token)`, bukan `CountAsync() > 0`. Bentuk SQL bergantung provider; tidak selalu literal `IF EXISTS`. |
+| List | Filter/order/pagination sebelum materialisasi, batas page size, dan urutan unik. Gunakan keyset/cursor untuk traversal besar bila sesuai kontrak. |
+| Bulk update/delete | `ExecuteUpdateAsync`/`ExecuteDeleteAsync` bila invariant, audit, concurrency, dan transaksi tetap terpenuhi. Fitur ini tersedia sejak EF Core 7, bukan khusus .NET 10. |
 
-| Gejala / Kebutuhan | Penyebab / Anti-Pattern ❌ | Solusi Wajib ✅ |
-| :--- | :--- | :--- |
-| Query dieksekusi berulang kali dalam loop | N+1 Query Problem | **EF Core:** `.Include()` atau proyeksi `.Select()`.<br>**Dapper:** `QueryMultipleAsync` atau Multi-Mapping. |
-| Dua tabel di-load ke RAM lalu di-join dengan LINQ | In-Memory Join (`.ToList()` lalu `.Join()`) | Lakukan **SQL JOIN di database engine** via navigation property atau `.Join()` sebelum materialisasi. |
-| Memory bloat pada operasi baca | ChangeTracker menyimpan snapshot data | Tambahkan **`.AsNoTracking()`** pada semua operasi query GET. |
-| Mengambil seluruh kolom padahal hanya butuh 2-3 field | Over-fetching (`SELECT *`) | Gunakan **Proyeksi `.Select(x => new Dto(...))`**. |
-| Query lambat saat `.Include()` lebih dari 1 collection | Cartesian Explosion ($M \times N$ baris) | Tambahkan **`.AsSplitQuery()`**. |
-| Update 10.000 data lambat & boros RAM | Load ke RAM $\rightarrow$ loop update $\rightarrow$ SaveChanges | Gunakan **`ExecuteUpdateAsync()`** / **`ExecuteDeleteAsync()`** (.NET 10). |
-| Mengecek apakah data ada terasa lambat | `CountAsync() > 0` (Full Scan) | Gunakan **`.AnyAsync()`** (menghasilkan SQL `IF EXISTS`). |
-| Paginasi lambat pada tabel besar | `ToList()` dulu baru `.Skip().Take()` | Pasang **`.Skip().Take()` pada `IQueryable`** sebelum materialisasi. |
+## Join di database dan DTO projection
 
----
-
-## 2. Aturan Abstraksi: Specific Repository Only
-
-DILARANG membuat `GenericRepository<T>` atau `IRepository<T>` karena `DbSet<T>` sudah merupakan repository, dan abstraksi generik membocorkan `IQueryable` serta menghalangi optimasi kustom.
+Misalnya model memiliki `Employee.DepartmentId` dan `Department.Id/Name`.
+Gunakan DTO khusus summary, jangan memanggil constructor `EmployeeResponse` dengan bentuk berbeda.
+Contoh menggunakan `offset` dan `pageSize` yang sudah divalidasi seperti bagian pagination.
 
 ```csharp
-// ❌ DILARANG: Generic Repository
-public interface IRepository<T> { IQueryable<T> Query(); }
-
-// ✅ WAJIB: Specific Repository Interface per Modul
-public interface IEmployeeRepository
-{
-    Task<IReadOnlyList<EmployeeResponse>> GetActiveSummariesAsync(Guid? deptId, CancellationToken cancellationToken = default);
-    Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<bool> ExistsByEmailAsync(string email, Guid? excludeId = null, CancellationToken cancellationToken = default);
-    Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-}
+public sealed record EmployeeDepartmentSummary(
+    Guid Id, string FullName, string Email, string Position, string DepartmentName, decimal Salary);
 ```
 
----
-
-## 3. Pencegahan N+1 Query Problem
-
-### A. EF Core 10: Eager Loading vs Proyeksi
-
 ```csharp
-// ❌ ANTI-PATTERN: N+1 Query di dalam loop
-var employees = await context.Employees.ToListAsync(cancellationToken);
-foreach (var emp in employees)
-{
-    // Dieksekusi N kali roundtrip ke database!
-    var dept = await context.Departments.FirstOrDefaultAsync(d => d.Id == emp.DepartmentId, cancellationToken);
-}
-
-// ✅ SOLUSI 1: Eager Loading dengan .Include()
-var result = await context.Employees
+var items = await context.Set<Employee>()
     .AsNoTracking()
-    .Include(e => e.Department)
-    .Where(e => e.IsActive)
-    .ToListAsync(cancellationToken);
-
-// ✅ SOLUSI 2: Proyeksi .Select() (Paling Optimal - Otomatis JOIN & hemat kolom)
-var result = await context.Employees
-    .AsNoTracking()
-    .Where(e => e.IsActive)
-    .Select(e => new EmployeeResponse(
-        e.Id,
-        $"{e.FirstName} {e.LastName}",
-        e.Email,
-        e.Position,
-        e.Department.Name, // Otomatis SQL LEFT JOIN
-        e.Salary
-    ))
+    .Where(employee => employee.IsActive)
+    .Join(context.Set<Department>(), employee => employee.DepartmentId, department => department.Id,
+        (employee, department) => new { Employee = employee, Department = department })
+    .OrderBy(row => row.Employee.Id)
+    .Skip(offset).Take(pageSize)
+    .Select(row => new EmployeeDepartmentSummary(
+        row.Employee.Id, row.Employee.FirstName + " " + row.Employee.LastName,
+        row.Employee.Email, row.Employee.Position, row.Department.Name, row.Employee.Salary))
     .ToListAsync(cancellationToken);
 ```
 
-### B. Dapper: Multi-Mapping & Batch Query
+Join ini inner join. Jangan mengasumsikan navigation projection selalu menghasilkan LEFT JOIN;
+required/optional relationship dan provider menentukan terjemahan SQL.
+Jangan me-load kedua tabel lalu melakukan LINQ Join di aplikasi. Materialisasi relasi oleh
+EF split query atau Dapper multi-mapping bukan larangan yang sama dengan join dua tabel tanpa batas di RAM.
+
+## Dapper: projection SQL berparameter
+
+Gunakan DTO summary di atas. Contoh SQL Server ini mempertahankan nama kolom yang cocok
+dengan constructor DTO dan token melalui `CommandDefinition`. Sesuaikan dialek untuk provider lain.
 
 ```csharp
-// ✅ SOLUSI 1: Single Query dengan Multi-Mapping (One-to-One)
 const string sql = """
-    SELECT e.Id, e.FirstName, e.LastName, e.Email, e.Position, e.Salary,
-           d.Id AS DepartmentId, d.Name, d.Code
+    SELECT e.Id, CONCAT(e.FirstName, ' ', e.LastName) AS FullName,
+           e.Email, e.Position, d.Name AS DepartmentName, e.Salary
     FROM Employees e
-    INNER JOIN Departments d ON e.DepartmentId = d.Id
+    INNER JOIN Departments d ON d.Id = e.DepartmentId
     WHERE e.IsActive = 1
+    ORDER BY e.Id
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
     """;
 
-var result = await connection.QueryAsync<Employee, Department, EmployeeResponse>(
-    new CommandDefinition(sql, cancellationToken: cancellationToken),
-    (emp, dept) => new EmployeeResponse(emp.Id, $"{emp.FirstName} {emp.LastName}", emp.Email, emp.Position, dept.Name, emp.Salary),
-    splitOn: "DepartmentId"
-);
-
-// ✅ SOLUSI 2: Batch Query Multiple (One-to-Many tanpa perkalian baris)
-const string batchSql = """
-    SELECT Id, Name FROM Departments WHERE Id = @Id;
-    SELECT Id, FirstName, LastName, Position FROM Employees WHERE DepartmentId = @Id AND IsActive = 1;
-    """;
-
-using var multi = await connection.QueryMultipleAsync(
-    new CommandDefinition(batchSql, new { Id = departmentId }, cancellationToken: cancellationToken));
-
-var dept = await multi.ReadFirstOrDefaultAsync<Department>();
-var emps = (await multi.ReadAsync<Employee>()).ToList();
+var items = await connection.QueryAsync<EmployeeDepartmentSummary>(
+    new CommandDefinition(sql, new { Offset = offset, PageSize = pageSize },
+        cancellationToken: cancellationToken));
 ```
 
----
+Untuk one-to-many dengan result set terpisah, pertimbangkan `QueryMultipleAsync`.
+Batasi child collection, dispose `GridReader`, dan jangan menggabungkan hasil parsial
+seolah-olah entity lengkap. Untuk multi-mapping, periksa `splitOn` dan kolom identity setiap tipe.
 
-## 4. Anti-Pattern: In-Memory Join
+## Pagination dan uniqueness
+
+- Tolak `page < 1`, `pageSize` di luar batas kebijakan, dan offset yang melebihi rentang integer.
+  Jangan diam-diam clamp input invalid. Contoh modul memakai default 20 dan maksimum 100.
+- Order harus unik: misalnya `OrderByDescending(CreatedAt).ThenBy(Id)`.
+  Urutan unik tidak menghilangkan pergeseran offset ketika data berubah; gunakan cursor jika dibutuhkan.
+- `CountAsync` tetap tepat untuk total count. Evaluasi biaya query count dan konsistensi snapshot
+  terhadap kebutuhan endpoint; jangan menghitung total jika kontrak tidak memerlukannya.
+- Normalisasi key sebelum pre-check **dan** insert/update dengan fungsi yang sama.
+  Hindari `ToLower()` pada kolom query yang menghambat pemakaian index.
+- Uniqueness harus dijamin constraint/index database, dengan migration dan kebijakan collation
+  yang sesuai. Pre-check saja tidak aman terhadap concurrent insert.
+- Terjemahkan hanya pelanggaran constraint yang dikenali menjadi konflik domain. Error koneksi,
+  timeout, FK, atau constraint lain tidak boleh disamarkan sebagai duplicate email.
+
+## Split query dan bulk operation
+
+Split query menambah roundtrip dan dapat membaca snapshot berbeda antar-query saat data berubah.
+Ukur SQL/query plan dan pertimbangkan transaksi/isolation bila konsistensi dibutuhkan.
+
+Bulk operation berjalan langsung tanpa change tracker atau `SaveChanges` interceptor:
 
 ```csharp
-// ❌ SANGAT BURUK: Menarik seluruh tabel ke RAM lalu di-join di memori C#
-var emps = await context.Employees.ToListAsync(cancellationToken);
-var depts = await context.Departments.ToListAsync(cancellationToken);
-var joined = emps.Join(depts, e => e.DepartmentId, d => d.Id, (e, d) => new { e, d }).ToList();
-
-// ✅ BENAR: Eksekusi SQL JOIN langsung di Database Engine
-var joined = await context.Employees
-    .AsNoTracking()
-    .Where(e => e.IsActive)
-    .Join(
-        context.Departments,
-        e => e.DepartmentId,
-        d => d.Id,
-        (e, d) => new EmployeeResponse(e.Id, $"{e.FirstName} {e.LastName}", e.Email, e.Position, d.Name, e.Salary)
-    )
-    .ToListAsync(cancellationToken);
+var now = timeProvider.GetUtcNow();
+var affected = await context.Set<Employee>()
+    .Where(employee => employee.DepartmentId == targetDeptId && employee.IsActive)
+    .ExecuteUpdateAsync(update => update
+        .SetProperty(employee => employee.IsActive, false)
+        .SetProperty(employee => employee.UpdatedAt, now), cancellationToken);
 ```
 
----
+Tetapkan hasil bisnis berdasarkan `affected`. Tambahkan filter concurrency jika diperlukan.
+Jangan mengharapkan `SaveChanges` berikutnya menerapkan bulk operation; jangan memakai entity
+tracked yang sudah stale tanpa reload/clear yang disengaja. Beberapa bulk statement tidak
+otomatis menjadi satu transaksi; bungkus eksplisit jika harus atomik.
 
-## 5. Mencegah Cartesian Explosion (.AsSplitQuery)
+## Bukti yang relevan
 
-Ketika me-load lebih dari satu relasi koleksi (`One-to-Many`), SQL JOIN biasa akan melipatgandakan data ($M \times N$). Gunakan `.AsSplitQuery()`:
-
-```csharp
-// ✅ Pisahkan menjadi query independen yang digabungkan aman di memori
-var department = await context.Departments
-    .AsNoTracking()
-    .Include(d => d.Employees)
-    .Include(d => d.Projects)
-    .AsSplitQuery() // Mencegah Cartesian Product
-    .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
-```
-
----
-
-## 6. Bulk Operations (.NET 10 ExecuteUpdate & ExecuteDelete)
-
-Dilarang menarik ribuan entitas ke memori hanya untuk memodifikasi satu kolom. Gunakan direct SQL execution:
-
-```csharp
-// ✅ UPDATE MASAL: 1 statement SQL langsung dieksekusi tanpa change tracking
-await context.Employees
-    .Where(e => e.DepartmentId == targetDeptId)
-    .ExecuteUpdateAsync(s => s
-        .SetProperty(e => e.IsActive, false)
-        .SetProperty(e => e.UpdatedAt, timeProvider.GetUtcNow()), 
-        cancellationToken);
-
-// ✅ DELETE MASAL: 1 statement SQL langsung
-await context.AuditLogs
-    .Where(log => log.CreatedAt < retentionDate)
-    .ExecuteDeleteAsync(cancellationToken);
-```
-
----
-
-## 7. Existence Check & Paginasi Efisien
-
-```csharp
-// ❌ BURUK: Full scan atau alokasi object
-var exists = await context.Employees.CountAsync(e => e.Email == email, cancellationToken) > 0;
-var exists = await context.Employees.FirstOrDefaultAsync(e => e.Email == email, cancellationToken) != null;
-
-// ✅ CEPAT: Menghasilkan SQL 'IF EXISTS (SELECT 1 ...)'
-var exists = await context.Employees.AnyAsync(e => e.Email == email, cancellationToken);
-
-// ✅ PAGINASI BENAR: Skip & Take sebelum ToListAsync
-public async Task<IReadOnlyList<EmployeeResponse>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken)
-{
-    return await context.Employees
-        .AsNoTracking()
-        .Where(e => e.IsActive)
-        .OrderByDescending(e => e.CreatedAt)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .Select(e => new EmployeeResponse(e.Id, $"{e.FirstName} {e.LastName}", e.Email, e.Position, e.Salary, e.DepartmentId, e.IsActive, e.CreatedAt))
-        .ToListAsync(cancellationToken);
-}
-```
+Untuk perubahan query, periksa SQL, jumlah roundtrip, jumlah baris/kolom, dan query plan
+sesuai skala kasus. Uji translation, constraint, dan transaksi dengan provider relational
+yang kompatibel; EF InMemory tidak membuktikan perilaku tersebut.

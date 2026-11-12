@@ -10,21 +10,24 @@ Repository ini berisi kumpulan skill modular yang dapat di-load secara *on-deman
 
 | Skill | Lingkup & Fokus | Target Platform | Dokumen |
 | :--- | :--- | :--- | :---: |
-| **`dotnet-api-design`** | Perancangan RESTful API berbasis **Modular Monolith**, standardisasi `ApiResponse<T>` envelope, explicit versioning `api/v1/`, primary constructors C# 14, `TimeProvider`, centralized `IExceptionHandler`, dan xUnit testing. | .NET 10 / C# 14 | [`SKILL.md`](./dotnet-api-design/SKILL.md) |
+| **`dotnet-api-design`** | Scaffolding, fitur baru, bug fix, review, dan maintenance REST API **Modular Monolith** dengan guardrail G1-G7 dan referensi on-demand. | Proyek baru: .NET 10 / C# 14; maintenance mengikuti proyek | [`SKILL.md`](./dotnet-api-design/SKILL.md) |
 | **`efcore-pattern`** | Desain persistence layer berkinerja tinggi, konfigurasi terpisah `IEntityTypeConfiguration<T>`, eliminasi N+1 query, audit interceptors otomatis, bulk update/delete SQL native, dan paginasi standar. | EF Core 9 / 10 | [`SKILL.md`](./efcore-pattern/SKILL.md) |
 
 ---
 
 ## 🎯 Ringkasan Guardrails Utama
 
-Setiap skill dibekali aturan mutlak (*core guardrails*) untuk memastikan AI menghasilkan kode berkualitas produksi:
+Setiap skill memiliki *core guardrails* sebagai standar proyek. Kepatuhan perlu diperiksa;
+instruksi teks saja tidak menjamin AI selalu mengaktifkan skill atau mengikuti semua aturan.
 
 ### 1. `dotnet-api-design`
-- **Wajib CancellationToken**: Semua method async (Controller, Service, Repository) wajib menerima & meneruskan `CancellationToken`.
-- **Wajib Envelope Response**: Semua response dibungkus `ApiResponse<T>` atau `ApiResponse`. Dilarang me-return raw entity/object.
-- **Explicit Versioning**: Route wajib menggunakan prefix `[Route("api/v1/[controller]")]`.
-- **Dilarang Generic Repository**: Buat interface repository spesifik per modul (misal `IEmployeeRepository`).
-- **Modern C# 14 & Centralized Error**: Menggunakan Primary Constructors, Collection Expressions (`[..]`), `TimeProvider`, dan turunan `AppException` yang ditangani oleh `GlobalExceptionHandler`.
+Sumber aturan utama adalah **G1-G7 di [SKILL.md](./dotnet-api-design/SKILL.md)**:
+cancellation, kontrak HTTP, versioning, repository spesifik, query database, C#/waktu,
+dan error handling. Pengecualian HTTP serta perbedaan read-only dan tracked mutation
+didefinisikan di sana, bukan diduplikasi di README.
+
+Workflow dipisahkan menjadi **scaffolding**, **maintenance**, dan **review tanpa edit**.
+Template panjang dimuat hanya saat diperlukan. Skill dapat dipasang sendiri tanpa `efcore-pattern`.
 
 ### 2. `efcore-pattern`
 - **Wajib `.AsNoTracking()`**: Semua operasi pembacaan (GET) wajib menggunakan `.AsNoTracking()` atau proyeksi langsung via `.Select()`.
@@ -40,9 +43,11 @@ Setiap skill dibekali aturan mutlak (*core guardrails*) untuk memastikan AI meng
 Pilih salah satu metode instalasi yang paling sesuai dengan alur kerja Anda:
 
 ### Opsi 1: Per-Project (Workspace Level) — Direkomendasikan
-Pasang skill ini langsung ke dalam project backend Anda agar tim dan AI di repo tersebut otomatis mematuhi standar yang sama.
+Pasang skill di project backend agar standar dapat digunakan bersama oleh tim dan AI.
 
-Buat folder `.agents/skills` di root project Anda, lalu salin folder skill yang diinginkan:
+Contoh berikut memakai `.agents/skills`. Pastikan host AI mendukung lokasi tersebut;
+sesuaikan dengan direktori skill yang didokumentasikan host Anda bila berbeda.
+Salin seluruh folder skill, termasuk `references/`:
 
 ```bash
 # Jalankan di root repository project .NET Anda:
@@ -79,6 +84,9 @@ Jika Anda ingin menyinkronkan pembaruan skill dari repository ini ke berbagai pr
 git submodule add https://github.com/<username>/agent-skills.git .agents/skills/agent-skills
 ```
 
+Periksa apakah host menemukan skill dalam folder bertingkat. Jika tidak, gunakan instalasi
+langsung per skill atau lokasi yang didukung host; keberadaan submodule tidak menjamin discovery.
+
 ---
 
 ### Opsi 3: Global Install (Tersedia di Seluruh Project Laptop Anda)
@@ -95,7 +103,9 @@ cp -r efcore-pattern ~/.gemini/config/skills/
 
 ## 💡 Contoh Trigger Pemakaian
 
-Skill ini menerapkan prinsip **Progressive Disclosure**. Anda tidak perlu menghafal instruksi teknis; cukup ajukan kebutuhan Anda dalam bahasa natural, dan agen AI akan otomatis mengaktifkan skill yang relevan:
+Skill ini menerapkan **Progressive Disclosure**: metadata membantu pemilihan skill,
+`SKILL.md` memuat aturan/workflow inti, dan referensi dibaca sesuai tugas. Aktivasi otomatis
+bergantung pada host/model; verifikasi skill tersedia dan gunakan pemanggilan eksplisit bila diperlukan.
 
 ### Skenario 1: Scaffolding Modul Baru (.NET 10)
 > *"Buatkan modul vertikal baru 'Orders' dengan endpoint POST, GET by id, dan GET paginated list. Pastikan sudah mengikuti arsitektur modular monolith kita."*
@@ -105,6 +115,16 @@ Skill ini menerapkan prinsip **Progressive Disclosure**. Anda tidak perlu mengha
 
 ### Skenario 3: Implementasi Soft-Delete & Audit Trail
 > *"Tolong buatkan interceptor EF Core untuk otomatis mengisi kolom audit `CreatedAt` dan `UpdatedAt` menggunakan `TimeProvider`."*
+
+### Skenario 4: Maintenance tanpa mengubah kontrak
+> *"Gunakan dotnet-api-design untuk memperbaiki validasi endpoint Orders ini. Pertahankan route, schema response, dan versi framework; tambahkan regression test yang relevan."*
+
+### Memperkuat kepatuhan aturan
+
+Gunakan [panduan enforcement](./dotnet-api-design/references/enforcement.md) untuk memasang
+anchor instruksi singkat di **repository backend pengguna** dan memilih analyzer/test/CI
+yang relevan. `AGENTS.md` di katalog skill ini tidak otomatis berlaku pada proyek pemakai.
+Jangan menyalin seluruh template ke instruksi permanen; arahkan ke G1-G7 dan baca referensi seperlunya.
 
 ---
 
@@ -116,9 +136,13 @@ agent-skills/
 ├── .gitignore                          # Aturan ignore file OS dan cache temporary
 │
 ├── dotnet-api-design/                  # Skill Arsitektur RESTful API .NET 10
-│   ├── SKILL.md                        # Panduan utama, core rules, & scaffolding blueprint
+│   ├── SKILL.md                        # G1-G7, routing referensi, dan workflow ringkas
 │   └── references/
-│       └── database-performance.md     # Referensi optimasi query & AsSplitQuery
+│       ├── foundation.md               # Envelope, error codes, exception handler
+│       ├── module-scaffolding.md       # Contoh modul Employees
+│       ├── bootstrap.md                # DI, validasi otomatis, HTTP pipeline
+│       ├── database-performance.md     # Query, pagination, uniqueness, bulk
+│       └── enforcement.md              # Instruksi host dan pemeriksaan otomatis
 │
 └── efcore-pattern/                     # Skill Pola Desain EF Core 9/10
     └── SKILL.md                        # Panduan entity configuration, interceptor, & bulk SQL

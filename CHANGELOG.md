@@ -8,6 +8,18 @@ Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id
 
 ## [Unreleased]
 
+### Changed
+- Restrukturisasi `dotnet-api-design`: aturan G1-G7 dan workflow tetap di `SKILL.md`;
+  fondasi, contoh modul, bootstrap, dan enforcement dipindahkan ke referensi on-demand.
+- Tambahkan trigger dan workflow maintenance/bug fix dengan perlindungan kontrak existing,
+  serta jalur review tanpa perubahan file.
+- Selaraskan contoh clock injection, read-only versus tracked mutation, DTO projection,
+  pagination bounded, dan pemetaan error validasi otomatis ke envelope.
+- Perjelas batas cancellation, konfigurasi autentikasi opsional, constraint uniqueness,
+  serta kebutuhan adapter provider dan integration test untuk konflik concurrent insert.
+- Dokumentasikan pemasangan mandiri, discovery yang bergantung host, dan anchor instruksi
+  pada repository backend tanpa menjanjikan kepatuhan AI absolut.
+
 ---
 
 ## [1.0.0] - 2026-11-11

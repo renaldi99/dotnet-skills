@@ -1,56 +1,56 @@
 ---
 name: efcore-pattern
 description: >-
-  Panduan praktis perancangan, implementasi, dan refactoring pola desain Entity Framework Core (EF Core 9/.NET 10, C# 14).
-  Mencakup konfigurasi IEntityTypeConfiguration terpisah, optimasi AsNoTracking & proyeksi DTO, eliminasi N+1 query,
-  audit trail interceptor otomatis, bulk update/delete via SQL native, paginasi standar, dan ceklis evaluasi.
-  Gunakan saat merancang persistence layer, menulis repository/service database, mengoptimalkan query lambat, atau mereview kode EF Core.
+  Practical guide to designing, implementing, and refactoring Entity Framework Core design patterns (EF Core 9/.NET 10, C# 14).
+  Covers separate IEntityTypeConfiguration, AsNoTracking & DTO projection optimization, N+1 query elimination,
+  automatic audit trail interceptors, native SQL bulk update/delete, standard pagination, and an evaluation checklist.
+  Use when designing a persistence layer, writing database repositories/services, optimizing slow queries, or reviewing EF Core code.
 ---
 
 # EF Core Design Patterns & Best Practices
 
-Panduan standar arsitektur dan pola implementasi **Entity Framework Core (EF Core 9 / .NET 10 & C# 14)** untuk aplikasi backend modern yang berkinerja tinggi, bersih, dan mudah dipelihara.
+Standard architecture guide and implementation patterns for **Entity Framework Core (EF Core 9 / .NET 10 & C# 14)** for modern backend applications that are high-performance, clean, and maintainable.
 
 ---
 
 ## 1. When to Use This Skill
 
-### ✅ Trigger Aktivasi (Gunakan skill ini jika):
-- Merancang entitas model database, DbContext, atau repository di .NET.
-- Menulis query pembacaan data (GET) atau mutasi data (POST/PUT/DELETE) menggunakan EF Core.
-- Merefaktor query lambat, memperbaiki masalah *N+1 query*, atau menghilangkan *tracking leakage*.
-- Mengimplementasikan otomatisasi kolom audit (`CreatedAt`, `UpdatedAt`) atau soft-delete.
-- Mengimplementasikan operasi update atau delete masal (*bulk operations*).
-- Melakukan code review atau audit kepatuhan terhadap best practices database EF Core.
+### ✅ Activation Triggers (Use this skill when):
+- Designing database entity models, a DbContext, or repositories in .NET.
+- Writing data read queries (GET) or data mutations (POST/PUT/DELETE) with EF Core.
+- Refactoring slow queries, fixing *N+1 query* problems, or removing *tracking leakage*.
+- Implementing automatic audit columns (`CreatedAt`, `UpdatedAt`) or soft-delete.
+- Implementing bulk update or delete operations (*bulk operations*).
+- Performing code reviews or compliance audits against EF Core database best practices.
 
-### ❌ Batasan (Jangan gunakan skill ini jika):
-- Proyek menggunakan Micro-ORM murni (Dapper murni tanpa EF Core).
-- Proyek menggunakan database NoSQL tanpa EF Core Provider (MongoDB native driver, Cosmos SDK native).
-- Proyek berbasis arsitektur Event Sourcing tingkat lanjut atau distributed ledger.
-
----
-
-## 2. Core Guardrails (Aturan Mutlak AI)
-
-Saat menulis atau memodifikasi kode EF Core, agen AI **WAJIB** mematuhi 6 aturan mutlak ini:
-
-1. **Wajib `.AsNoTracking()` pada Operasi Read**: Semua query pembacaan (GET/query) wajib menggunakan `.AsNoTracking()` atau diproyeksikan langsung ke DTO melalui `.Select()`.
-2. **Pisahkan Konfigurasi Entitas**: Dilarang menggunakan Data Annotations database (`[Table]`, `[Column]`, `[ForeignKey]`) di dalam model entitas. Gunakan class `IEntityTypeConfiguration<T>` terpisah.
-3. **Dilarang Query di Dalam Perulangan (N+1)**: Operasi pengambilan data berelasi wajib diselesaikan via eager loading (`.Include()`) atau proyeksi `.Select()`. Dilarang memanggil database di dalam loop `foreach`/`for`.
-4. **Wajib Teruskan `CancellationToken`**: Setiap pemanggilan method async EF Core (`ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, `ExecuteUpdateAsync`, dll.) wajib menerima dan meneruskan parameter `CancellationToken cancellationToken = default`.
-5. **Gunakan Bulk Operations untuk Mutasi Banyak Baris**: Dilarang me-load puluhan/ratusan baris data ke memori hanya untuk mengubah kolom atau menghapus data. Wajib gunakan `ExecuteUpdateAsync()` atau `ExecuteDeleteAsync()`.
-6. **Wajib Abstraksi `TimeProvider`**: Dilarang menggunakan `DateTime.UtcNow` secara statis pada interceptor atau domain logic. Gunakan dependensi `TimeProvider` yang di-inject.
+### ❌ Boundaries (Do not use this skill when):
+- The project uses a pure Micro-ORM (pure Dapper without EF Core).
+- The project uses a NoSQL database without an EF Core provider (MongoDB native driver, native Cosmos SDK).
+- The project is based on advanced Event Sourcing or a distributed ledger architecture.
 
 ---
 
-## 3. Pola Desain Standar EF Core (Implementasi & Kode)
+## 2. Core Guardrails (Absolute AI Rules)
 
-### Pola 1: Konfigurasi Entitas Terpisah (`IEntityTypeConfiguration<T>`)
+When writing or modifying EF Core code, the AI agent **MUST** follow these 6 absolute rules:
 
-Memisahkan konfigurasi skema, relasi, dan indeks ke file terpisah agar model entitas tetap bersih.
+1. **`.AsNoTracking()` Required for Reads**: Every read query (GET/query) must use `.AsNoTracking()` or project directly to a DTO via `.Select()`.
+2. **Separate Entity Configuration**: Do not use database Data Annotations (`[Table]`, `[Column]`, `[ForeignKey]`) in entity models. Use a separate `IEntityTypeConfiguration<T>` class.
+3. **No Queries Inside Loops (N+1)**: Loading related data must be done via eager loading (`.Include()`) or `.Select()` projection. Do not call the database inside a `foreach`/`for` loop.
+4. **Always Forward `CancellationToken`**: Every async EF Core call (`ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, `ExecuteUpdateAsync`, etc.) must accept and forward a `CancellationToken cancellationToken = default` parameter.
+5. **Use Bulk Operations for Multi-Row Mutations**: Do not load tens/hundreds of rows into memory just to change a column or delete data. Use `ExecuteUpdateAsync()` or `ExecuteDeleteAsync()`.
+6. **`TimeProvider` Abstraction Required**: Do not use a static `DateTime.UtcNow` in interceptors or domain logic. Use an injected `TimeProvider` dependency.
+
+---
+
+## 3. Standard EF Core Design Patterns (Implementation & Code)
+
+### Pattern 1: Separate Entity Configuration (`IEntityTypeConfiguration<T>`)
+
+Move schema, relationship, and index configuration into separate files so entity models stay clean.
 
 ```csharp
-// 1. Model Entitas Bersih
+// 1. Clean Entity Model
 public class Product
 {
     public Guid Id { get; set; }
@@ -63,7 +63,7 @@ public class Product
     public DateTimeOffset? UpdatedAt { get; set; }
 }
 
-// 2. Class Konfigurasi Terpisah (Data/Configurations/ProductConfiguration.cs)
+// 2. Separate Configuration Class (Data/Configurations/ProductConfiguration.cs)
 public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
@@ -79,18 +79,18 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.Price)
             .HasPrecision(18, 2);
 
-        // Relasi One-to-Many eksplisit
+        // Explicit one-to-many relationship
         builder.HasOne(p => p.Category)
             .WithMany(c => c.Products)
             .HasForeignKey(p => p.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Indeks untuk kolom yang sering dicari
+        // Index for frequently searched columns
         builder.HasIndex(p => p.CategoryId);
     }
 }
 
-// 3. Registrasi Otomatis di DbContext
+// 3. Automatic Registration in DbContext
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Product> Products => Set<Product>();
@@ -99,7 +99,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        // Otomatis meregistrasikan seluruh IEntityTypeConfiguration dalam assembly
+        // Automatically registers every IEntityTypeConfiguration in the assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }
@@ -107,15 +107,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
 ---
 
-### Pola 2: Read vs Write Separation (Optimasi Query)
+### Pattern 2: Read vs Write Separation (Query Optimization)
 
-Membedakan secara tegas alur data baca (read) dan ubah (write) untuk efisiensi memori ChangeTracker.
+Clearly separate read and write data flows for ChangeTracker memory efficiency.
 
 #### A. Read-Only Query (AsNoTracking & DTO Projection)
 ```csharp
 public async Task<List<ProductResponse>> GetActiveProductsAsync(CancellationToken cancellationToken)
 {
-    // Hanya membaca kolom yang dibutuhkan dan langsung di-JOIN di server database
+    // Read only the needed columns and JOIN directly on the database server
     return await context.Products
         .AsNoTracking()
         .Where(p => p.IsActive)
@@ -124,7 +124,7 @@ public async Task<List<ProductResponse>> GetActiveProductsAsync(CancellationToke
             p.Id,
             p.Name,
             p.Price,
-            p.Category.Name // Otomatis SQL LEFT JOIN
+            p.Category.Name // Automatic SQL LEFT JOIN
         ))
         .ToListAsync(cancellationToken);
 }
@@ -145,24 +145,24 @@ public async Task<bool> UpdateProductPriceAsync(Guid id, decimal newPrice, Cance
 
 ---
 
-### Pola 3: Pencegahan N+1 Query Problem
+### Pattern 3: Preventing the N+1 Query Problem
 
 ```csharp
-// ❌ ANTI-PATTERN: N+1 Query di dalam loop
+// ❌ ANTI-PATTERN: N+1 query inside a loop
 var products = await context.Products.ToListAsync(cancellationToken);
 foreach (var p in products)
 {
-    // Dieksekusi N kali roundtrip ke database!
+    // Executes N roundtrips to the database!
     var category = await context.Categories.FirstOrDefaultAsync(c => c.Id == p.CategoryId, cancellationToken);
 }
 
-// ✅ SOLUSI 1: Eager Loading dengan .Include()
+// ✅ SOLUTION 1: Eager loading with .Include()
 var products = await context.Products
     .AsNoTracking()
     .Include(p => p.Category)
     .ToListAsync(cancellationToken);
 
-// ✅ SOLUSI 2: Proyeksi .Select() (Paling Hemat Memori & Bandwidth)
+// ✅ SOLUTION 2: .Select() projection (most memory- and bandwidth-efficient)
 var productSummaries = await context.Products
     .AsNoTracking()
     .Select(p => new ProductSummary(p.Id, p.Name, p.Category.Name))
@@ -171,9 +171,9 @@ var productSummaries = await context.Products
 
 ---
 
-### Pola 4: Specific Repository / Service Langsung
+### Pattern 4: Specific Repository / Direct Service
 
-Hindari abstraksi `IRepository<T>` generik yang membocorkan `IQueryable`. Buat repository spesifik yang mengekspresikan kebutuhan bisnis, atau inject `AppDbContext` langsung ke Service layer.
+Avoid a generic `IRepository<T>` abstraction that leaks `IQueryable`. Create specific repositories that express business needs, or inject `AppDbContext` directly into the Service layer.
 
 ```csharp
 public interface IProductRepository
@@ -210,12 +210,12 @@ public class ProductRepository(AppDbContext context) : IProductRepository
 
 ---
 
-### Pola 5: Audit Trail Otomatis via `SaveChangesInterceptor`
+### Pattern 5: Automatic Audit Trail via `SaveChangesInterceptor`
 
-Mengisi kolom `CreatedAt` dan `UpdatedAt` secara terpusat tanpa penulisan manual di Controller/Service.
+Fill the `CreatedAt` and `UpdatedAt` columns centrally without writing them manually in Controllers/Services.
 
 ```csharp
-// 1. Interface Penanda
+// 1. Marker Interface
 public interface IAuditable
 {
     DateTimeOffset CreatedAt { get; set; }
@@ -251,7 +251,7 @@ public class AuditInterceptor(TimeProvider timeProvider) : SaveChangesIntercepto
     }
 }
 
-// 3. Konfigurasi Dependency Injection di Program.cs
+// 3. Dependency Injection Configuration in Program.cs
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<AuditInterceptor>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
@@ -263,14 +263,14 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 
 ---
 
-### Pola 6: Bulk Update & Delete Masal (`ExecuteUpdateAsync` / `ExecuteDeleteAsync`)
+### Pattern 6: Bulk Update & Delete (`ExecuteUpdateAsync` / `ExecuteDeleteAsync`)
 
-Mengeksekusi perintah SQL `UPDATE` atau `DELETE` langsung ke database tanpa memuat ribuan baris ke RAM.
+Execute SQL `UPDATE` or `DELETE` statements directly against the database without loading thousands of rows into RAM.
 
 ```csharp
 var now = timeProvider.GetUtcNow();
 
-// Bulk Update langsung di database
+// Bulk update directly in the database
 int updatedRows = await context.Products
     .Where(p => p.CategoryId == categoryId && p.IsActive)
     .ExecuteUpdateAsync(setter => setter
@@ -278,7 +278,7 @@ int updatedRows = await context.Products
         .SetProperty(p => p.UpdatedAt, now),
         cancellationToken);
 
-// Bulk Delete langsung di database
+// Bulk delete directly in the database
 int deletedRows = await context.Products
     .Where(p => !p.IsActive && p.CreatedAt < cutOffDate)
     .ExecuteDeleteAsync(cancellationToken);
@@ -286,9 +286,9 @@ int deletedRows = await context.Products
 
 ---
 
-### Pola 7: Paginasi Standar (Offset / PagedResult)
+### Pattern 7: Standard Pagination (Offset / PagedResult)
 
-Formula paginasi efisien yang membatasi pengambilan record di level database server:
+An efficient pagination formula that limits record retrieval at the database server level:
 
 ```csharp
 public record PagedResult<T>(List<T> Items, int TotalCount, int PageNumber, int PageSize);
@@ -317,65 +317,65 @@ public async Task<PagedResult<ProductResponse>> GetPagedProductsAsync(
 
 ---
 
-## 4. Anti-Patterns & Solusi Refactoring
+## 4. Anti-Patterns & Refactoring Solutions
 
-| Anti-Pattern | Dampak Negatif | Solusi Terstandarisasi |
+| Anti-Pattern | Negative Impact | Standard Solution |
 | :--- | :--- | :--- |
-| **Generic `IRepository<T>`** | Leaky abstraction, query filter tersebar | Gunakan **Specific Repository** atau DbContext langsung di service layer. |
-| **N+1 Query Problem** | Puluhan/ratusan roundtrip ke database | Gunakan **`.Include()`** atau proyeksi **`.Select()`**. |
-| **In-Memory Filtering** | Memuat jutaan record ke RAM (`.ToList()` lalu `.Where()`) | Letakkan filter **`.Where()` sebelum `.ToListAsync()`**. |
-| **Missing `AsNoTracking`** | Memory bloat pada operasi GET | Tambahkan **`.AsNoTracking()`** pada semua query baca. |
-| **Looping `SaveChanges`** | Transaksi database berulang dan lambat | Gunakan **`ExecuteUpdateAsync`** atau satu kali **`SaveChangesAsync`**. |
-| **`CountAsync() > 0`** | Menghitung seluruh data yang cocok (Full Scan) | Gunakan **`.AnyAsync()`** (menghasilkan SQL `EXISTS`). |
-| **Hardcoded `DateTime.UtcNow`** | Sulit diuji secara deterministik | Inject abstraksi **`TimeProvider`**. |
+| **Generic `IRepository<T>`** | Leaky abstraction, scattered query filters | Use a **Specific Repository** or DbContext directly in the service layer. |
+| **N+1 Query Problem** | Tens/hundreds of database roundtrips | Use **`.Include()`** or a **`.Select()`** projection. |
+| **In-Memory Filtering** | Loads millions of records into RAM (`.ToList()` then `.Where()`) | Put the **`.Where()` filter before `.ToListAsync()`**. |
+| **Missing `AsNoTracking`** | Memory bloat on GET operations | Add **`.AsNoTracking()`** to every read query. |
+| **Looping `SaveChanges`** | Repeated, slow database transactions | Use **`ExecuteUpdateAsync`** or a single **`SaveChangesAsync`**. |
+| **`CountAsync() > 0`** | Counts every matching row (full scan) | Use **`.AnyAsync()`** (produces SQL `EXISTS`). |
+| **Hardcoded `DateTime.UtcNow`** | Hard to test deterministically | Inject the **`TimeProvider`** abstraction. |
 
 ---
 
-## 5. Ceklis Evaluasi & Verifikasi (Checklist)
+## 5. Evaluation & Verification Checklist
 
-Gunakan ceklis ini saat membuat fitur baru, merefaktor query database, atau melakukan pull request (PR) review:
+Use this checklist when building new features, refactoring database queries, or reviewing pull requests (PRs):
 
-### A. Model & Konfigurasi Tabel
-- [ ] **Konfigurasi Terpisah**: File konfigurasi dipisah per model menggunakan `IEntityTypeConfiguration<T>`, bukan menumpuk atribut `[Table]` / `[Column]` di class entitas.
-- [ ] **Auto Apply Configuration**: Di `AppDbContext.cs`, sudah dipasang `modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);`.
-- [ ] **Panjang String & Presisi Desimal**:
-  - Kolom teks memiliki batas panjang: `.HasMaxLength(...)`.
-  - Kolom desimal (harga, uang) memiliki presisi: `.HasPrecision(18, 2)`.
-- [ ] **Index pada Foreign Key**: Kolom foreign key atau kolom yang sering difilter diberi `.HasIndex(...)`.
+### A. Models & Table Configuration
+- [ ] **Separate Configuration**: Configuration files are split per model using `IEntityTypeConfiguration<T>`, not piled up as `[Table]` / `[Column]` attributes on entity classes.
+- [ ] **Auto Apply Configuration**: `AppDbContext.cs` calls `modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);`.
+- [ ] **String Length & Decimal Precision**:
+  - Text columns have a maximum length: `.HasMaxLength(...)`.
+  - Decimal columns (prices, money) have precision: `.HasPrecision(18, 2)`.
+- [ ] **Indexes on Foreign Keys**: Foreign key columns or frequently filtered columns have `.HasIndex(...)`.
 
-### B. Query Pembacaan Data (GET)
-- [ ] **Gunakan `.AsNoTracking()`**: Semua query yang hanya untuk dibaca/ditampilkan menyertakan `.AsNoTracking()`.
-- [ ] **Proyeksi DTO (`.Select()`)**: Hindari me-return langsung model entitas database ke Controller; gunakan `.Select(x => new MyDto(...))` untuk mengambil kolom yang dibutuhkan saja.
-- [ ] **Bebas dari N+1 Query**:
-  - Tidak ada query database yang dipanggil di dalam loop `foreach`/`for`.
-  - Menggunakan `.Include()` untuk relasi atau otomatis via `.Select()`.
-- [ ] **Cek Keberadaan Efisien**: Menggunakan `.AnyAsync(...)` alih-alih `CountAsync() > 0` atau `FirstOrDefaultAsync() != null`.
-- [ ] **Paginasi di Database**: Paginasi `.Skip().Take()` dijalankan pada `IQueryable` sebelum `.ToListAsync()`.
+### B. Data Read Queries (GET)
+- [ ] **Use `.AsNoTracking()`**: Every query that only reads/displays data includes `.AsNoTracking()`.
+- [ ] **DTO Projection (`.Select()`)**: Avoid returning database entity models directly to Controllers; use `.Select(x => new MyDto(...))` to fetch only the needed columns.
+- [ ] **Free of N+1 Queries**:
+  - No database query is called inside a `foreach`/`for` loop.
+  - Use `.Include()` for relationships or rely on `.Select()`.
+- [ ] **Efficient Existence Checks**: Use `.AnyAsync(...)` instead of `CountAsync() > 0` or `FirstOrDefaultAsync() != null`.
+- [ ] **Pagination in the Database**: `.Skip().Take()` pagination runs on the `IQueryable` before `.ToListAsync()`.
 
-### C. Tambah, Update & Hapus (POST, PUT, DELETE)
-- [ ] **Tracked Entity untuk Update Tunggal**: Entity diambil dari DbContext, nilainya diubah, lalu disimpan dengan `await context.SaveChangesAsync(cancellationToken)`.
-- [ ] **Bulk Update / Bulk Delete**: Jika mengubah atau menghapus banyak baris sekaligus, gunakan `ExecuteUpdateAsync()` atau `ExecuteDeleteAsync()` alih-alih me-load semua ke memori.
-- [ ] **Satu Kali `SaveChangesAsync`**: Operasi yang harus berhasil bersamaan disimpan dalam satu kali pemanggilan `SaveChangesAsync()` agar otomatis berada dalam 1 transaksi.
+### C. Create, Update & Delete (POST, PUT, DELETE)
+- [ ] **Tracked Entity for Single Updates**: The entity is loaded from the DbContext, its values are changed, then saved with `await context.SaveChangesAsync(cancellationToken)`.
+- [ ] **Bulk Update / Bulk Delete**: When changing or deleting many rows at once, use `ExecuteUpdateAsync()` or `ExecuteDeleteAsync()` instead of loading everything into memory.
+- [ ] **Single `SaveChangesAsync`**: Operations that must succeed together are saved in a single `SaveChangesAsync()` call so they run in one transaction automatically.
 
-### D. Performa & Higienitas Kode
-- [ ] **Wajib `CancellationToken`**: Setiap pemanggilan async (`ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, dll.) meneruskan parameter `cancellationToken`.
-- [ ] **Audit Trail Otomatis**: Kolom `CreatedAt` dan `UpdatedAt` diisi otomatis melalui `SaveChangesInterceptor` (tidak diisi manual di controller/service).
-- [ ] **Gunakan `TimeProvider`**: Pengambilan waktu saat ini menggunakan `TimeProvider.System.GetUtcNow()` agar mudah diuji dengan unit test.
-- [ ] **Build Bersih**: Kode lolos build tanpa warning (`dotnet build`).
+### D. Performance & Code Hygiene
+- [ ] **`CancellationToken` Required**: Every async call (`ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, etc.) forwards the `cancellationToken` parameter.
+- [ ] **Automatic Audit Trail**: `CreatedAt` and `UpdatedAt` are filled automatically via `SaveChangesInterceptor` (not manually in controllers/services).
+- [ ] **Use `TimeProvider`**: The current time is obtained via `TimeProvider.System.GetUtcNow()` so it is easy to unit test.
+- [ ] **Clean Build**: The code builds without warnings (`dotnet build`).
 
 ---
 
 ## 6. Definition of Done & Verification
 
-Sebelum menyelesaikan tugas implementasi atau review EF Core, jalankan verifikasi berikut di terminal:
+Before completing an EF Core implementation or review task, run the following verification in the terminal:
 
 ```bash
-# 1. Pastikan solusi ter-build bersih tanpa error dan warning
+# 1. Make sure the solution builds cleanly without errors or warnings
 dotnet build --configuration Release
 
-# 2. Pastikan tidak ada model change yang tertinggal dari migrasi
+# 2. Make sure no model changes are missing from migrations
 dotnet ef migrations has-pending-model-changes
 
-# 3. Jalankan pengujian unit dan integrasi
+# 3. Run unit and integration tests
 dotnet test
 ```

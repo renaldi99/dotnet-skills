@@ -1,74 +1,74 @@
 # 🤖 Enterprise .NET Agent Skills
 
-Kumpulan **Agent Skills** standar untuk AI Coding Assistants ([Google Antigravity](https://antigravity.google), [Claude Code](https://claude.com/product/claude-code), [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot), dll.) yang dirancang untuk mempercepat pembuatan, refactoring, dan standarisasi arsitektur backend enterprise berbasis **.NET 10 (C# 14)** dan **Entity Framework Core**.
+A collection of standard **Agent Skills** for AI Coding Assistants ([Google Antigravity](https://antigravity.google), [Claude Code](https://claude.com/product/claude-code), [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot), etc.) designed to speed up building, refactoring, and standardizing enterprise backend architecture on **.NET 10 (C# 14)** and **Entity Framework Core**.
 
 ---
 
-## 📦 Katalog Skills
+## 📦 Skill Catalog
 
-Repository ini berisi kumpulan skill modular yang dapat di-load secara _on-demand_ oleh AI Agent:
+This repository contains modular skills that an AI agent can load _on demand_:
 
 <!-- prettier-ignore -->
-| Skill | Lingkup & Fokus | Target Platform | Dokumen |
+| Skill | Scope & Focus | Target Platform | Document |
 | :--- | :--- | :--- | :---: |
-| **`dotnet-api-design`** | Scaffolding, fitur baru, bug fix, review, dan maintenance REST API **Modular Monolith** dengan guardrail G1-G7 dan referensi on-demand. | Proyek baru: .NET 10 / C# 14; maintenance mengikuti proyek | [`SKILL.md`](./dotnet-api-design/SKILL.md) |
-| **`efcore-pattern`** | Desain persistence layer berkinerja tinggi, konfigurasi terpisah `IEntityTypeConfiguration<T>`, eliminasi N+1 query, audit interceptors otomatis, bulk update/delete SQL native, dan paginasi standar. | EF Core 9 / 10 | [`SKILL.md`](./efcore-pattern/SKILL.md) |
+| **`dotnet-api-design`** | Scaffolding, new features, bug fixes, reviews, and maintenance of **Modular Monolith** REST APIs with G1-G7 guardrails and on-demand references. | New projects: .NET 10 / C# 14; maintenance follows the project | [`SKILL.md`](./dotnet-api-design/SKILL.md) |
+| **`efcore-pattern`** | High-performance persistence layer design, separate `IEntityTypeConfiguration<T>` configuration, N+1 query elimination, automatic audit interceptors, native SQL bulk update/delete, and standard pagination. | EF Core 9 / 10 | [`SKILL.md`](./efcore-pattern/SKILL.md) |
 
 ---
 
-## 🎯 Ringkasan Guardrails Utama
+## 🎯 Core Guardrails Summary
 
-Setiap skill berdiri sendiri dengan _core guardrails_ masing-masing dan tidak saling bergantung.
-Untuk memakai lebih dari satu skill, sebutkan skill tersebut secara eksplisit di prompt. Kepatuhan perlu diperiksa;
-instruksi teks saja tidak menjamin AI selalu mengaktifkan skill atau mengikuti semua aturan.
+Each skill stands alone with its own _core guardrails_ and does not depend on the others.
+To use more than one skill, name those skills explicitly in your prompt. Compliance still needs checking;
+text instructions alone do not guarantee the AI always activates a skill or follows every rule.
 
 ### 1. `dotnet-api-design`
 
-Sumber aturan utama adalah **G1-G7 di [SKILL.md](./dotnet-api-design/SKILL.md)**:
-cancellation, kontrak HTTP, versioning, repository spesifik, query database, C#/waktu,
-dan error handling. Pengecualian HTTP serta perbedaan read-only dan tracked mutation
-didefinisikan di sana, bukan diduplikasi di README.
+The primary source of rules is **G1-G7 in [SKILL.md](./dotnet-api-design/SKILL.md)**:
+cancellation, HTTP contract, versioning, specific repositories, database queries, C#/time,
+and error handling. HTTP exceptions and the difference between read-only and tracked mutation
+are defined there, not duplicated in the README.
 
-Workflow dipisahkan menjadi **scaffolding**, **maintenance**, dan **review tanpa edit**.
-Template panjang dimuat hanya saat diperlukan.
+Workflows are split into **scaffolding**, **maintenance**, and **review without edits**.
+Long templates are loaded only when needed.
 
 ### 2. `efcore-pattern`
 
-- **Wajib `.AsNoTracking()`**: Semua operasi pembacaan (GET) wajib menggunakan `.AsNoTracking()` atau proyeksi langsung via `.Select()`.
-- **Pemisahan Konfigurasi**: Skema, index, dan relasi tabel wajib diletakkan di class `IEntityTypeConfiguration<T>` terpisah (bukan Data Annotations di model).
-- **Anti N+1 Query**: Wajib menggunakan eager loading (`.Include()`) atau proyeksi `.Select()`. Dilarang mengeksekusi query database di dalam perulangan loop.
-- **Native Bulk Operations**: Wajib gunakan `.ExecuteUpdateAsync()` dan `.ExecuteDeleteAsync()` untuk mutasi masal tanpa me-load entitas ke memori.
-- **TimeProvider Interceptors**: Otomatisasi kolom audit (`CreatedAt`, `UpdatedAt`) wajib menginjeksikan abstraksi `TimeProvider` (bukan `DateTime.UtcNow` statis).
+- **`.AsNoTracking()` Required**: Every read operation (GET) must use `.AsNoTracking()` or project directly via `.Select()`.
+- **Separate Configuration**: Schema, indexes, and table relationships must live in separate `IEntityTypeConfiguration<T>` classes (not Data Annotations on the model).
+- **No N+1 Queries**: Use eager loading (`.Include()`) or `.Select()` projection. Do not run database queries inside loops.
+- **Native Bulk Operations**: Use `.ExecuteUpdateAsync()` and `.ExecuteDeleteAsync()` for bulk mutations without loading entities into memory.
+- **TimeProvider Interceptors**: Automatic audit columns (`CreatedAt`, `UpdatedAt`) must inject the `TimeProvider` abstraction (not a static `DateTime.UtcNow`).
 
 ---
 
-## 🚀 Cara Instalasi
+## 🚀 Installation
 
-Pilih salah satu metode instalasi yang paling sesuai dengan alur kerja Anda:
+Choose the installation method that best fits your workflow:
 
-### Opsi 1: Per-Project (Workspace Level) — Direkomendasikan
+### Option 1: Per-Project (Workspace Level) — Recommended
 
-Pasang skill di project backend agar standar dapat digunakan bersama oleh tim dan AI.
+Install the skills in your backend project so the standard is shared by the team and the AI.
 
-Contoh berikut memakai `.agents/skills`. Pastikan host AI mendukung lokasi tersebut;
-sesuaikan dengan direktori skill yang didokumentasikan host Anda bila berbeda.
-Salin seluruh folder skill, termasuk `references/`:
+The example below uses `.agents/skills`. Make sure your AI host supports that location;
+adjust to the skill directory documented by your host if it differs.
+Copy the whole skill folder, including `references/`:
 
 ```bash
-# Jalankan di root repository project .NET Anda:
+# Run at the root of your .NET project repository:
 mkdir -p .agents/skills
 
-# Clone repo ini ke folder temporary lalu copy skill yang dibutuhkan:
+# Clone this repo into a temporary folder, then copy the skills you need:
 git clone --depth 1 https://github.com/renaldi99/dotnet-skills.git /tmp/dotnet-skills
 cp -r /tmp/dotnet-skills/dotnet-api-design .agents/skills/
 cp -r /tmp/dotnet-skills/efcore-pattern .agents/skills/
 rm -rf /tmp/dotnet-skills
 ```
 
-Perintah di atas mengambil versi terbaru dari branch default. Untuk versi rilis tertentu,
-tambahkan `--branch <tag>` pada `git clone` (misalnya `--branch v1.1.0`).
+The command above fetches the latest version from the default branch. For a specific release,
+add `--branch <tag>` to `git clone` (for example `--branch v1.1.0`).
 
-> **Catatan Struktur Folder di Project Anda:**
+> **Folder Structure in Your Project:**
 >
 > ```text
 > my-dotnet-project/
@@ -85,23 +85,23 @@ tambahkan `--branch <tag>` pada `git clone` (misalnya `--branch v1.1.0`).
 
 ---
 
-### Opsi 2: Menggunakan Git Submodule (Mudah Di-update)
+### Option 2: Git Submodule (Easy to Update)
 
-Jika Anda ingin menyinkronkan pembaruan skill dari repository ini ke berbagai project dengan mudah:
+If you want to sync skill updates from this repository into multiple projects easily:
 
 ```bash
-# Di root project Anda:
+# At the root of your project:
 git submodule add https://github.com/renaldi99/dotnet-skills.git .agents/skills/dotnet-skills
 ```
 
-Periksa apakah host menemukan skill dalam folder bertingkat. Jika tidak, gunakan instalasi
-langsung per skill atau lokasi yang didukung host; keberadaan submodule tidak menjamin discovery.
+Check whether your host discovers skills in nested folders. If not, use the direct
+per-skill installation or a location your host supports; having a submodule does not guarantee discovery.
 
 ---
 
-### Opsi 3: Global Install (Tersedia di Seluruh Project Laptop Anda)
+### Option 3: Global Install (Available in Every Project on Your Machine)
 
-Jika Anda menggunakan **Google Antigravity** dan ingin skill ini aktif di semua project tanpa perlu menyalin ke setiap workspace:
+If you use **Google Antigravity** and want these skills active in every project without copying them into each workspace:
 
 ```bash
 # Antigravity Global Customizations
@@ -114,95 +114,95 @@ rm -rf /tmp/dotnet-skills
 
 ---
 
-## 💡 Contoh Trigger Pemakaian
+## 💡 Usage Trigger Examples
 
-Skill ini menerapkan **Progressive Disclosure**: metadata membantu pemilihan skill,
-`SKILL.md` memuat aturan/workflow inti, dan referensi dibaca sesuai tugas. Aktivasi otomatis
-bergantung pada host/model; verifikasi skill tersedia dan gunakan pemanggilan eksplisit bila diperlukan.
+These skills apply **Progressive Disclosure**: metadata helps skill selection,
+`SKILL.md` holds the core rules/workflows, and references are read per task. Automatic activation
+depends on the host/model; verify the skill is available and invoke it explicitly when needed.
 
-### Skenario 1: Scaffolding Modul Baru (.NET 10)
+### Scenario 1: Scaffolding a New Module (.NET 10)
 
-> _"Buatkan modul vertikal baru 'Orders' dengan endpoint POST, GET by id, dan GET paginated list. Pastikan sudah mengikuti arsitektur modular monolith kita."_
+> _"Create a new vertical module 'Orders' with POST, GET by id, and paginated GET list endpoints. Make sure it follows our modular monolith architecture."_
 
-### Skenario 2: Optimasi Performa & Refactoring EF Core
+### Scenario 2: EF Core Performance Optimization & Refactoring
 
-> _"Review service `CustomerService.cs` ini. Kenapa query di endpoint get all terasa lambat? Tolong optimasi dan hilangkan potensi N+1 query."_
+> _"Review this `CustomerService.cs` service. Why is the query on the get-all endpoint slow? Please optimize it and remove any potential N+1 queries."_
 
-### Skenario 3: Implementasi Soft-Delete & Audit Trail
+### Scenario 3: Implementing Soft-Delete & Audit Trail
 
-> _"Tolong buatkan interceptor EF Core untuk otomatis mengisi kolom audit `CreatedAt` dan `UpdatedAt` menggunakan `TimeProvider`."_
+> _"Please create an EF Core interceptor that automatically fills the `CreatedAt` and `UpdatedAt` audit columns using `TimeProvider`."_
 
-### Skenario 4: Maintenance tanpa mengubah kontrak
+### Scenario 4: Maintenance Without Changing the Contract
 
-> _"Gunakan dotnet-api-design untuk memperbaiki validasi endpoint Orders ini. Pertahankan route, schema response, dan versi framework; tambahkan regression test yang relevan."_
+> _"Use dotnet-api-design to fix the validation on this Orders endpoint. Keep the route, response schema, and framework version; add relevant regression tests."_
 
-### Skenario 5: Menggabungkan dua skill secara eksplisit
+### Scenario 5: Combining Two Skills Explicitly
 
-> _"Gunakan dotnet-api-design dan efcore-pattern untuk menambahkan endpoint laporan Orders per bulan. Tambahkan bulk update status via ExecuteUpdateAsync."_
+> _"Use dotnet-api-design and efcore-pattern to add a monthly Orders report endpoint. Add a bulk status update via ExecuteUpdateAsync."_
 
-### Memperkuat kepatuhan aturan
+### Strengthening Rule Compliance
 
-Gunakan [panduan enforcement](./dotnet-api-design/references/enforcement.md) untuk memasang
-anchor instruksi singkat di **repository backend pengguna** dan memilih analyzer/test/CI
-yang relevan. `AGENTS.md` di katalog skill ini tidak otomatis berlaku pada proyek pemakai.
-Jangan menyalin seluruh template ke instruksi permanen; arahkan ke G1-G7 dan baca referensi seperlunya.
+Use the [enforcement guide](./dotnet-api-design/references/enforcement.md) to add a short
+instruction anchor in **the user's backend repository** and choose the relevant
+analyzers/tests/CI. The `AGENTS.md` in this skill catalog does not automatically apply to consuming projects.
+Do not copy every template into permanent instructions; point to G1-G7 and read references as needed.
 
 ---
 
-## 📁 Struktur Repository
+## 📁 Repository Structure
 
 ```text
 dotnet-skills/
-├── README.md                           # Dokumentasi utama dan katalog skill
-├── CHANGELOG.md                        # Riwayat perubahan
-├── AGENTS.md                           # Instruksi maintenance katalog (bukan untuk proyek pemakai)
-├── .gitignore                          # Aturan ignore file OS dan cache temporary
+├── README.md                           # Main documentation and skill catalog
+├── CHANGELOG.md                        # Change history
+├── AGENTS.md                           # Catalog maintenance instructions (not for consuming projects)
+├── .gitignore                          # Ignore rules for OS files and temporary caches
 │
-├── dotnet-api-design/                  # Skill Arsitektur RESTful API .NET 10
-│   ├── SKILL.md                        # G1-G7, routing referensi, dan workflow ringkas
+├── dotnet-api-design/                  # .NET 10 RESTful API architecture skill
+│   ├── SKILL.md                        # G1-G7, reference routing, and concise workflows
 │   └── references/
 │       ├── foundation.md               # Envelope, error codes, exception handler
-│       ├── module-scaffolding.md       # Contoh modul Employees
-│       ├── bootstrap.md                # DI, validasi otomatis, HTTP pipeline
-│       ├── database-performance.md     # Query, pagination, uniqueness, bulk
-│       └── enforcement.md              # Instruksi host dan pemeriksaan otomatis
+│       ├── module-scaffolding.md       # Employees module example
+│       ├── bootstrap.md                # DI, automatic validation, HTTP pipeline
+│       ├── database-performance.md     # Queries, pagination, uniqueness, bulk
+│       └── enforcement.md              # Host instructions and automated checks
 │
-└── efcore-pattern/                     # Skill Pola Desain EF Core 9/10
-    └── SKILL.md                        # Panduan entity configuration, interceptor, & bulk SQL
+└── efcore-pattern/                     # EF Core 9/10 design pattern skill
+    └── SKILL.md                        # Entity configuration, interceptor, & bulk SQL guide
 ```
 
 ---
 
-## 🤝 Berkontribusi
+## 🤝 Contributing
 
-Ingin menambahkan skill baru atau memperbarui panduan yang ada?
+Want to add a new skill or update an existing guide?
 
-1. Fork repository ini.
-2. Buat direktori skill baru: `<nama-skill>/SKILL.md`.
-3. Pastikan `SKILL.md` menyertakan YAML frontmatter dengan format:
+1. Fork this repository.
+2. Create a new skill directory: `<skill-name>/SKILL.md`.
+3. Make sure `SKILL.md` includes YAML frontmatter in this format:
    ```markdown
    ---
-   name: nama-skill
+   name: skill-name
    description: >-
-     Deskripsi kapan skill ini digunakan (trigger aktivasi) dan batasannya.
+     Describe when this skill is used (activation triggers) and its boundaries.
    ---
    ```
-4. Dokumentasikan panduan panjang di dalam subfolder `references/`.
-5. Pastikan skill berdiri sendiri: jangan menautkan atau mewajibkan skill lain.
-6. Daftarkan skill baru di setiap bagian `README.md` berikut:
-   - [ ] **Katalog Skills**: baris tabel (nama, lingkup, target platform, tautan `SKILL.md`).
-   - [ ] **Ringkasan Guardrails Utama**: subbagian `### N. <nama-skill>` yang merujuk ke
-         `SKILL.md`, bukan menyalin seluruh aturan.
-   - [ ] **Cara Instalasi**: perintah `cp -r` di Opsi 1 dan Opsi 3, serta folder skill di
-         diagram "Catatan Struktur Folder".
-   - [ ] **Contoh Trigger Pemakaian**: minimal satu skenario; tambahkan contoh prompt gabungan
-         bila skill lazim dipakai bersama skill lain.
-   - [ ] **Struktur Repository**: folder skill beserta `SKILL.md` dan `references/` bila ada.
-7. Catat penambahan di `CHANGELOG.md` bagian `[Unreleased]` → `Added`.
-8. Ajukan Pull Request.
+4. Put long guides in a `references/` subfolder.
+5. Make sure the skill stands alone: do not link to or require other skills.
+6. Register the new skill in every one of these `README.md` sections:
+   - [ ] **Skill Catalog**: a table row (name, scope, target platform, `SKILL.md` link).
+   - [ ] **Core Guardrails Summary**: a `### N. <skill-name>` subsection that points to
+         `SKILL.md` instead of copying every rule.
+   - [ ] **Installation**: `cp -r` commands in Option 1 and Option 3, plus the skill folder in
+         the "Folder Structure in Your Project" diagram.
+   - [ ] **Usage Trigger Examples**: at least one scenario; add a combined prompt example
+         when the skill is commonly used together with another skill.
+   - [ ] **Repository Structure**: the skill folder with `SKILL.md` and `references/` if any.
+7. Record the addition in `CHANGELOG.md` under `[Unreleased]` → `Added`.
+8. Open a Pull Request.
 
 ---
 
-## 📄 Lisensi
+## 📄 License
 
-Didistribusikan di bawah lisensi [MIT License](LICENSE). Bebas digunakan, dimodifikasi, dan didistribusikan untuk proyek komersial maupun non-komersial.
+Distributed under the [MIT License](LICENSE). Free to use, modify, and distribute for commercial and non-commercial projects.

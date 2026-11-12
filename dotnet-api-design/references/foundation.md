@@ -1,13 +1,13 @@
-# Foundation: envelope dan error handling
+# Foundation: envelope and error handling
 
-Baca hanya ketika membuat atau mengubah fondasi bersama. Pada proyek existing, adaptasi
-helper yang sudah ada; jangan mengganti kontrak response hanya agar identik dengan contoh.
-Setiap blok C# di bawah adalah file terpisah; menggunakan implicit usings dan nullable enabled.
+Read only when creating or changing the shared foundation. In existing projects, adapt
+the helpers already present; do not change the response contract just to match this example.
+Each C# block below is a separate file; implicit usings and nullable are enabled.
 
 ## Common/Models/ApiResponse.cs
 
-Clock adalah dependency wajib factory, bukan fallback statis. Bentuk JSON tetap
-`success`, `code`, `message`, `data`, `errors`, dan `timestamp` dengan default web JSON options.
+The clock is a required factory dependency, not a static fallback. The JSON shape stays
+`success`, `code`, `message`, `data`, `errors`, and `timestamp` with the default web JSON options.
 
 ```csharp
 namespace MyService.Api.Common.Models;
@@ -22,7 +22,7 @@ public class ApiResponse<T>
     public required DateTimeOffset Timestamp { get; init; }
 
     public static ApiResponse<T> SuccessResult(
-        T data, TimeProvider timeProvider, string message = "Permintaan berhasil diproses.") =>
+        T data, TimeProvider timeProvider, string message = "Request processed successfully.") =>
         new() { Success = true, Code = "SUCCESS", Message = message,
             Data = data, Timestamp = timeProvider.GetUtcNow() };
 
@@ -35,7 +35,7 @@ public class ApiResponse<T>
 public class ApiResponse : ApiResponse<object>
 {
     public static ApiResponse SuccessResult(
-        TimeProvider timeProvider, string message = "Permintaan berhasil diproses.") =>
+        TimeProvider timeProvider, string message = "Request processed successfully.") =>
         new() { Success = true, Code = "SUCCESS", Message = message,
             Timestamp = timeProvider.GetUtcNow() };
 
@@ -48,8 +48,8 @@ public class ApiResponse : ApiResponse<object>
 
 ## Common/Models/PagedResult.cs
 
-`TotalCount` berarti total item yang cocok dengan filter, bukan jumlah halaman.
-Untuk data sangat besar, pertimbangkan cursor pagination dengan kontrak terpisah.
+`TotalCount` is the total number of items matching the filter, not the number of pages.
+For very large data sets, consider cursor pagination with a separate contract.
 
 ```csharp
 namespace MyService.Api.Common.Models;
@@ -92,22 +92,22 @@ public static class ErrorCodeExtensions
         new Dictionary<ErrorCode, (HttpStatusCode, string)>
         {
             [ErrorCode.None] = (HttpStatusCode.OK, "Success."),
-            [ErrorCode.InternalServerError] = (HttpStatusCode.InternalServerError, "Terjadi kesalahan internal pada server."),
-            [ErrorCode.ValidationError] = (HttpStatusCode.BadRequest, "Data masukan tidak valid."),
-            [ErrorCode.UnauthorizedAccess] = (HttpStatusCode.Unauthorized, "Autentikasi diperlukan."),
-            [ErrorCode.ForbiddenAccess] = (HttpStatusCode.Forbidden, "Hak akses ditolak."),
-            [ErrorCode.BadRequest] = (HttpStatusCode.BadRequest, "Format permintaan tidak valid."),
-            [ErrorCode.OperationCancelled] = ((HttpStatusCode)499, "Permintaan dibatalkan oleh klien."),
-            [ErrorCode.EntityNotFound] = (HttpStatusCode.NotFound, "Data tidak ditemukan."),
-            [ErrorCode.EntityAlreadyExists] = (HttpStatusCode.Conflict, "Data sudah terdaftar."),
-            [ErrorCode.InvalidBusinessRule] = (HttpStatusCode.BadRequest, "Aturan bisnis tidak terpenuhi.")
+            [ErrorCode.InternalServerError] = (HttpStatusCode.InternalServerError, "An internal server error occurred."),
+            [ErrorCode.ValidationError] = (HttpStatusCode.BadRequest, "The input data is invalid."),
+            [ErrorCode.UnauthorizedAccess] = (HttpStatusCode.Unauthorized, "Authentication is required."),
+            [ErrorCode.ForbiddenAccess] = (HttpStatusCode.Forbidden, "Access denied."),
+            [ErrorCode.BadRequest] = (HttpStatusCode.BadRequest, "The request format is invalid."),
+            [ErrorCode.OperationCancelled] = ((HttpStatusCode)499, "The request was cancelled by the client."),
+            [ErrorCode.EntityNotFound] = (HttpStatusCode.NotFound, "Data not found."),
+            [ErrorCode.EntityAlreadyExists] = (HttpStatusCode.Conflict, "Data already exists."),
+            [ErrorCode.InvalidBusinessRule] = (HttpStatusCode.BadRequest, "Business rule not satisfied.")
         }.ToFrozenDictionary();
 
     public static HttpStatusCode ToHttpStatusCode(this ErrorCode code) =>
         Map.TryGetValue(code, out var value) ? value.Status : HttpStatusCode.InternalServerError;
 
     public static string ToDefaultMessage(this ErrorCode code) =>
-        Map.TryGetValue(code, out var value) ? value.Message : "Terjadi kesalahan internal pada server.";
+        Map.TryGetValue(code, out var value) ? value.Message : "An internal server error occurred.";
 
     public static string ToErrorCodeString(this ErrorCode code) =>
         code == ErrorCode.None ? "SUCCESS" : $"ERR_{code.ToString().ToUpperInvariant()}";
@@ -116,8 +116,8 @@ public static class ErrorCodeExtensions
 
 ## Common/Exceptions/AppException.cs
 
-Hanya pesan domain yang aman untuk klien boleh dimasukkan ke exception ini.
-Jangan membungkus semua kegagalan database/network menjadi `AppException`.
+Only domain messages that are safe for clients may be put into this exception.
+Do not wrap every database/network failure in an `AppException`.
 
 ```csharp
 using System.Net;
@@ -139,15 +139,15 @@ public class NotFoundException(ErrorCode errorCode, string? message = null)
 public class ConflictException(ErrorCode errorCode, string? message = null)
     : AppException(errorCode, message, statusCode: HttpStatusCode.Conflict);
 
-public class ValidationException(object errors, string message = "Validasi data gagal.")
+public class ValidationException(object errors, string message = "Data validation failed.")
     : AppException(ErrorCode.ValidationError, message, errors, HttpStatusCode.BadRequest);
 ```
 
 ## Common/Handlers/GlobalExceptionHandler.cs
 
-`IExceptionHandler` didaftarkan sebagai singleton; jangan inject scoped DbContext/repository.
-ASP.NET Core dapat menangani request abort sebelum memanggil handler; jangan mengandalkan
-handler ini untuk menghitung semua disconnect atau mengirim envelope pada koneksi mati.
+`IExceptionHandler` is registered as a singleton; do not inject a scoped DbContext/repository.
+ASP.NET Core may handle a request abort before calling the handler; do not rely on
+this handler to count every disconnect or to send an envelope over a dead connection.
 
 ```csharp
 using Microsoft.AspNetCore.Diagnostics;
@@ -193,8 +193,8 @@ public sealed class GlobalExceptionHandler(
 }
 ```
 
-Cancellation tanpa `RequestAborted` tidak otomatis berarti 499. Jika aplikasi memiliki
-timeout policy, petakan timeout yang teridentifikasi pada batas pemiliknya ke status yang
-disepakati (misalnya 503/504 sesuai semantik). Error tak dikenal tetap 500 dan dicatat.
-Validasi otomatis, authentication challenge, dan status non-exception membutuhkan
-integrasi pipeline tersendiri; lihat pemilihan referensi di SKILL.md.
+Cancellation without `RequestAborted` does not automatically mean 499. If the application has
+a timeout policy, map identified timeouts at their owning boundary to the agreed status
+(for example 503/504 depending on semantics). Unknown errors stay 500 and are logged.
+Automatic validation, authentication challenges, and non-exception statuses need their
+own pipeline integration; see the reference selection in SKILL.md.

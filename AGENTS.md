@@ -1,39 +1,40 @@
-# Instruksi maintenance katalog skill
+# Skill catalog maintenance instructions
 
-File ini berlaku untuk repository katalog skill ini saja, bukan untuk proyek backend
-yang memasang skill. Anchor untuk proyek pemakai ada di
+This file applies only to this skill catalog repository, not to backend projects
+that install the skills. The anchor for consuming projects is in
 `dotnet-api-design/references/enforcement.md`.
 
-## Sumber aturan
+## Source of rules
 
-- `dotnet-api-design/SKILL.md` adalah satu-satunya sumber G1-G7. Referensi, README, dan
-  CHANGELOG hanya merujuk atau memberi contoh; jangan menulis versi aturan yang berbeda.
-- Setiap skill berdiri sendiri: jangan menautkan, mewajibkan, atau menyelaraskan isi satu
-  skill dengan skill lain. Kombinasi skill ditentukan pengguna melalui prompt.
+- `dotnet-api-design/SKILL.md` is the only source of G1-G7. References, README, and
+  CHANGELOG only point to or illustrate them; do not write a different version of the rules.
+- Each skill stands alone: do not link, require, or align the content of one
+  skill with another. Users decide which skills to combine through their prompts.
 
-## Saat mengubah skill
+## When changing a skill
 
-- Jaga `SKILL.md` ringkas (target di bawah ~180 baris, batas keras 500 baris). Contoh kode
-  panjang masuk `references/` dan didaftarkan di tabel "Pilih referensi sesuai tugas".
-- Frontmatter wajib memiliki `name` (sama dengan nama folder) dan `description` yang memuat
-  trigger serta lingkup.
-- Contoh antar-file di dalam satu skill harus konsisten: nama tipe, namespace, signature,
-  bentuk `PagedResult<T>`, kode error, dan path di diagram struktur. Ubah semua tempat yang
-  terdampak sekaligus. Konsistensi ini tidak berlaku lintas skill.
-- Jangan menambah dependency pada contoh (library assertion, validasi, mapping) kecuali
-  dibutuhkan untuk menunjukkan aturan; sebutkan alternatif "ikuti proyek existing".
-- Contoh harus bisa dikompilasi secara masuk akal: `using` lengkap, tidak ada helper yang
-  dirujuk tanpa definisi, dan unit test benar-benar meng-assert (bukan memanggil mock).
+- Keep `SKILL.md` concise (target under ~180 lines, hard limit 500 lines). Long code
+  examples go in `references/` and are listed in the "Choose references by task" table.
+- Frontmatter must have `name` (matching the folder name) and a `description` that includes
+  triggers and scope.
+- Examples across files within a single skill must be consistent: type names, namespaces,
+  signatures, the `PagedResult<T>` shape, error codes, and paths in the structure diagram.
+  Update every affected place at once. This consistency does not apply across skills.
+- Do not add dependencies to examples (assertion, validation, mapping libraries) unless
+  needed to demonstrate a rule; mention the "follow the existing project" alternative.
+- Examples should plausibly compile: complete `using` directives, no helpers referenced
+  without a definition, and unit tests that actually assert (not just call a mock).
+- Write skill and documentation content in English.
 
-## Saat menambah skill baru
+## When adding a new skill
 
-Ikuti checklist di bagian "Berkontribusi" pada `README.md`; semua bagian README yang
-tercantum di sana wajib diperbarui, bukan hanya tabel katalog.
+Follow the checklist in the "Contributing" section of `README.md`; every README section
+listed there must be updated, not only the catalog table.
 
-## Sebelum menyatakan selesai
+## Before declaring done
 
-1. Periksa tautan relatif di `SKILL.md`, README, dan CHANGELOG masih valid.
-2. Periksa jumlah baris `SKILL.md` (`wc -l */SKILL.md`).
-3. Cari sisa pola lama yang sudah dihapus (misalnya `grep -rn "<pola lama>" .`).
-4. Catat perubahan di `CHANGELOG.md` bagian `[Unreleased]`.
-5. Jangan commit/push tanpa permintaan pemilik repository.
+1. Check that relative links in `SKILL.md`, README, and CHANGELOG are still valid.
+2. Check the `SKILL.md` line count (`wc -l */SKILL.md`).
+3. Search for leftovers of removed patterns (for example `grep -rn "<old pattern>" .`).
+4. Record changes in `CHANGELOG.md` under `[Unreleased]`.
+5. Do not commit/push without a request from the repository owner.

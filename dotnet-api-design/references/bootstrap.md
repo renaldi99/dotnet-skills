@@ -1,19 +1,19 @@
-# Bootstrap: DI dan HTTP pipeline
+# Bootstrap: DI and HTTP pipeline
 
-Baca untuk aplikasi baru atau perubahan pipeline. Contoh ini **baseline tanpa autentikasi**,
-bukan konfigurasi production yang otomatis aman. Sebelum deployment, tentukan endpoint
-public/protected dan konfigurasi auth sesuai kebutuhan pengguna. Jangan menimpa startup existing.
+Read for new applications or pipeline changes. This example is an **unauthenticated baseline**,
+not a production configuration that is secure by default. Before deployment, decide which endpoints
+are public/protected and configure auth according to the user's needs. Do not overwrite existing startup code.
 
-Prasyarat: SDK Web .NET 10, nullable/implicit usings enabled, file Foundation dan Module
-scaffolding. Paket contoh: `Microsoft.EntityFrameworkCore.SqlServer` dan
-`Microsoft.AspNetCore.OpenApi` yang kompatibel dengan .NET 10. Ikuti versi terpusat proyek;
-jangan menambahkan Scalar, health-check database, atau library validasi jika tidak diperlukan.
+Prerequisites: .NET 10 Web SDK, nullable/implicit usings enabled, and the Foundation and Module
+scaffolding files. Example packages: `Microsoft.EntityFrameworkCore.SqlServer` and
+`Microsoft.AspNetCore.OpenApi` compatible with .NET 10. Follow the project's central package versions;
+do not add Scalar, database health checks, or validation libraries unless needed.
 
 ## Program.cs
 
-Invalid model/JSON dipetakan melalui `InvalidModelStateResponseFactory`, bukan exception handler.
-`SuppressMapClientErrors` mencegah MVC mengubah status error kosong menjadi ProblemDetails.
-Status pages mengisi error kosong hanya pada prefix API; body yang sudah ada tidak ditimpa.
+Invalid model/JSON is mapped through `InvalidModelStateResponseFactory`, not the exception handler.
+`SuppressMapClientErrors` stops MVC from turning empty error statuses into ProblemDetails.
+Status pages fill empty errors only under the API prefix; existing bodies are not overwritten.
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +26,7 @@ using MyService.Api.Modules.Employees;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection wajib diisi.");
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddSingleton(TimeProvider.System);
@@ -40,7 +40,7 @@ builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
         var clock = context.HttpContext.RequestServices.GetRequiredService<TimeProvider>();
         var errors = context.ModelState
             .Where(entry => entry.Value is { Errors.Count: > 0 })
-            .ToDictionary(entry => entry.Key, _ => new[] { "Nilai tidak valid." });
+            .ToDictionary(entry => entry.Key, _ => new[] { "Invalid value." });
         var code = ErrorCode.ValidationError;
         return new BadRequestObjectResult(
             ApiResponse.FailureResult(code.ToErrorCodeString(), code.ToDefaultMessage(), clock, errors));
@@ -62,7 +62,7 @@ app.UseStatusCodePages(async statusContext =>
     var status = context.Response.StatusCode;
     var clock = context.RequestServices.GetRequiredService<TimeProvider>();
     await context.Response.WriteAsJsonAsync(
-        ApiResponse.FailureResult($"HTTP_{status}", "Permintaan tidak dapat diproses.", clock),
+        ApiResponse.FailureResult($"HTTP_{status}", "The request could not be processed.", clock),
         context.RequestAborted);
 });
 app.UseHttpsRedirection();
@@ -76,22 +76,22 @@ app.MapHealthChecks("/health");
 app.Run();
 ```
 
-## Integrasi yang bergantung pada proyek
+## Project-dependent integrations
 
-| Kebutuhan | Integrasi wajib bila dipakai |
+| Need | Required integration when used |
 | :--- | :--- |
-| Authentication/authorization | Daftarkan `AddAuthentication(...).Add...(...)` dan `AddAuthorization(...)` dengan scheme/policy nyata. Pasang `UseAuthentication()` lalu `UseAuthorization()` setelah routing dan sebelum endpoint. Terapkan policy/`[Authorize]`/fallback policy yang disepakati; registrasi saja tidak melindungi endpoint. |
-| 401/403 dari auth handler | Pertahankan header seperti `WWW-Authenticate`. Status pages hanya mengisi body kosong; gunakan events/result handler yang sesuai scheme bila body ditulis sendiri. Jangan mengganti respons menjadi 200 atau redirect login untuk kontrak API. |
-| FluentValidation | Register validator dan panggil validasi di boundary yang disepakati. Validator async harus dijalankan dengan `ValidateAsync` dan token request, bukan MVC validation pipeline sinkron. Jangan mendaftarkan validator tanpa pernah memanggilnya. |
-| Readiness database | Tambahkan provider health check dan paketnya; baseline `/health` hanya liveness, bukan bukti database siap. Batasi exposure detail operasional. |
-| Reverse proxy | Ikuti konfigurasi forwarded headers/trusted proxies proyek sebelum middleware yang bergantung pada scheme/IP; jangan percaya header dari semua sumber. |
+| Authentication/authorization | Register `AddAuthentication(...).Add...(...)` and `AddAuthorization(...)` with real schemes/policies. Add `UseAuthentication()` then `UseAuthorization()` after routing and before endpoints. Apply the agreed policy/`[Authorize]`/fallback policy; registration alone does not protect endpoints. |
+| 401/403 from the auth handler | Keep headers such as `WWW-Authenticate`. Status pages only fill empty bodies; use scheme-specific events/result handlers if you write the body yourself. Do not turn responses into 200 or a login redirect for API contracts. |
+| FluentValidation | Register validators and call validation at the agreed boundary. Async validators must run with `ValidateAsync` and the request token, not the synchronous MVC validation pipeline. Do not register validators that are never called. |
+| Database readiness | Add a provider health check and its package; the baseline `/health` is liveness only, not proof the database is ready. Limit exposure of operational details. |
+| Reverse proxy | Follow the project's forwarded headers/trusted proxies configuration before middleware that depends on scheme/IP; do not trust headers from every source. |
 
-## Kontrak yang harus diperiksa
+## Contract checks
 
-- Success, domain failure, invalid model/JSON memakai envelope dan status yang sesuai.
-- Error kosong 404/405/415 pada `/api` memakai `HTTP_{status}`; error domain memakai `ERR_...`.
-  Jika proyek memakai kode lain, pertahankan kode existing dan sesuaikan pemetaan.
-- HEAD/204/304 tidak mendapat body; health/OpenAPI/file/stream bukan envelope aplikasi.
-- Response yang sudah dimulai tidak ditulis ulang. Client disconnect tidak menjanjikan body.
-- Uji host startup dan HTTP pipeline dengan `WebApplicationFactory`/integration test proyek,
-  bukan hanya unit test Controller yang tidak menjalankan filter maupun middleware.
+- Success, domain failure, and invalid model/JSON use the envelope and the appropriate status.
+- Empty 404/405/415 errors under `/api` use `HTTP_{status}`; domain errors use `ERR_...`.
+  If the project uses other codes, keep the existing codes and adjust the mapping.
+- HEAD/204/304 get no body; health/OpenAPI/file/stream are not application envelopes.
+- Responses that have already started are not rewritten. A client disconnect does not promise a body.
+- Test host startup and the HTTP pipeline with `WebApplicationFactory`/the project's integration tests,
+  not only Controller unit tests that run neither filters nor middleware.

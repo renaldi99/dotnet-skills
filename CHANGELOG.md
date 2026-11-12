@@ -1,73 +1,75 @@
 # Changelog
 
-Semua perubahan penting pada repository **Enterprise .NET Agent Skills** ini didokumentasikan dalam berkas ini.
+All notable changes to the **Enterprise .NET Agent Skills** repository are documented in this file.
 
-Format dokumen ini mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) dan mengikuti standar [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
 ## [Unreleased]
 
 ### Added
-- Contoh endpoint `PUT` (Update) pada modul Employees beserta DTO `UpdateEmployeeRequest`.
-- Contoh unit test Service (xUnit, NSubstitute, FakeTimeProvider) untuk konflik email,
-  audit timestamp, not found, dan propagasi `CancellationToken`.
-- `AGENTS.md` berisi instruksi maintenance untuk repository katalog skill ini.
+- `PUT` (Update) endpoint example in the Employees module with the `UpdateEmployeeRequest` DTO.
+- Service unit test examples (xUnit, NSubstitute, FakeTimeProvider) for email conflicts,
+  audit timestamps, not found, and `CancellationToken` propagation.
+- `AGENTS.md` with maintenance instructions for this skill catalog repository.
 
 ### Fixed
-- Repository Employees kini menerjemahkan pelanggaran index `UX_Employees_Email` (SQL Server
-  2601/2627) menjadi `ConflictException` di boundary persistence; sebelumnya contoh belum
-  menyertakan adapter ini sehingga insert email duplikat secara bersamaan menjadi 500.
+- The Employees repository now translates `UX_Employees_Email` index violations (SQL Server
+  2601/2627) into `ConflictException` at the persistence boundary; previously the example did not
+  include this adapter, so concurrent duplicate email inserts resulted in 500.
 
 ### Changed
-- Panduan kontribusi README kini berisi checklist seluruh bagian yang wajib diperbarui
-  saat menambah skill baru; `AGENTS.md` merujuk checklist tersebut.
-- Pulihkan diagram struktur project di referensi `module-scaffolding.md`, selaras
-  dengan path contoh dan tanpa menambah konteks di file utama skill.
-- Restrukturisasi `dotnet-api-design`: aturan G1-G7 dan workflow tetap di `SKILL.md`;
-  fondasi, contoh modul, bootstrap, dan enforcement dipindahkan ke referensi on-demand.
-- Tambahkan trigger dan workflow maintenance/bug fix dengan perlindungan kontrak existing,
-  serta jalur review tanpa perubahan file.
-- Selaraskan contoh clock injection, read-only versus tracked mutation, DTO projection,
-  pagination bounded, dan pemetaan error validasi otomatis ke envelope.
-- Perjelas batas cancellation, konfigurasi autentikasi opsional, constraint uniqueness,
-  serta integration test untuk konflik concurrent insert.
-- Tegaskan setiap skill berdiri sendiri tanpa tautan atau ketergantungan antar-skill;
-  kombinasi skill disebutkan pengguna secara eksplisit di prompt.
-- Dokumentasikan pemasangan mandiri, discovery yang bergantung host, dan anchor instruksi
-  pada repository backend tanpa menjanjikan kepatuhan AI absolut.
+- Translate both skills, their references, README, AGENTS.md, and this changelog to English.
+  Rules, G1-G7 IDs, structure, and code behavior are unchanged; message strings in code examples
+  are now in English.
+- The README contributing guide now has a checklist of every section to update
+  when adding a new skill; `AGENTS.md` points to that checklist.
+- Restore the project structure diagram in the `module-scaffolding.md` reference, aligned
+  with the example paths and without adding context to the main skill file.
+- Restructure `dotnet-api-design`: G1-G7 rules and workflows stay in `SKILL.md`;
+  foundation, module example, bootstrap, and enforcement move to on-demand references.
+- Add triggers and maintenance/bug fix workflows that protect existing contracts,
+  plus a review path without file changes.
+- Align examples for clock injection, read-only versus tracked mutation, DTO projection,
+  bounded pagination, and mapping automatic validation errors to the envelope.
+- Clarify cancellation boundaries, optional authentication configuration, uniqueness constraints,
+  and integration tests for concurrent insert conflicts.
+- State that each skill stands alone without links or dependencies between skills;
+  users name skill combinations explicitly in their prompts.
+- Document standalone installation, host-dependent discovery, and instruction anchors
+  in the backend repository without promising absolute AI compliance.
 
 ---
 
 ## [1.0.0] - 2026-11-11
 
 ### Added
-- **Skill `dotnet-api-design`** ([`dotnet-api-design/SKILL.md`](./dotnet-api-design/SKILL.md)):
-  - Standar perancangan, scaffolding, dan refactoring RESTful API pada **.NET 10 (C# 14)** berbasis arsitektur **Modular Monolith**.
+- **`dotnet-api-design` skill** ([`dotnet-api-design/SKILL.md`](./dotnet-api-design/SKILL.md)):
+  - Standard for designing, scaffolding, and refactoring RESTful APIs on **.NET 10 (C# 14)** with a **Modular Monolith** architecture.
   - **7 Core Guardrails**:
-    1. Wajib parameter `CancellationToken cancellationToken = default` pada semua method async.
-    2. Wajib standarisasi wrapper response `ApiResponse<T>` / `ApiResponse`.
-    3. Wajib explicit versioning pada route controller (`api/v1/[controller]`).
-    4. Larangan generic repository (wajib interface repository spesifik per modul).
-    5. Penyelesaian operasi JOIN di database level & larangan in-memory join.
-    6. Penggunaan idiom modern C# 14 (Primary Constructors, Collection Expressions `[..]`, dan `TimeProvider`).
-    7. Penanganan error terpusat dengan melempar turunan `AppException` dan ditangani oleh `GlobalExceptionHandler` (`IExceptionHandler`).
-  - Dokumen referensi performa database ([`dotnet-api-design/references/database-performance.md`](./dotnet-api-design/references/database-performance.md)) yang mencakup pencegahan N+1 query, panduan `AsSplitQuery`, dan paginasi.
-  - Template golden scaffolding modul (`Employees`) mencakup Controller, Service, Repository, DTO records, dan registrasi DI.
+    1. Required `CancellationToken cancellationToken = default` parameter on every async method.
+    2. Required standard `ApiResponse<T>` / `ApiResponse` response wrapper.
+    3. Required explicit versioning on controller routes (`api/v1/[controller]`).
+    4. No generic repositories (a specific repository interface per module is required).
+    5. JOIN operations resolved at the database level & no in-memory joins.
+    6. Modern C# 14 idioms (Primary Constructors, Collection Expressions `[..]`, and `TimeProvider`).
+    7. Centralized error handling by throwing `AppException` subclasses handled by `GlobalExceptionHandler` (`IExceptionHandler`).
+  - Database performance reference document ([`dotnet-api-design/references/database-performance.md`](./dotnet-api-design/references/database-performance.md)) covering N+1 query prevention, `AsSplitQuery` guidance, and pagination.
+  - Golden scaffolding template for the `Employees` module covering Controller, Service, Repository, DTO records, and DI registration.
 
-- **Skill `efcore-pattern`** ([`efcore-pattern/SKILL.md`](./efcore-pattern/SKILL.md)):
-  - Panduan implementasi dan best practices **Entity Framework Core (EF Core 9 / .NET 10 & C# 14)** untuk persistence layer berkinerja tinggi.
+- **`efcore-pattern` skill** ([`efcore-pattern/SKILL.md`](./efcore-pattern/SKILL.md)):
+  - Implementation guide and best practices for **Entity Framework Core (EF Core 9 / .NET 10 & C# 14)** for a high-performance persistence layer.
   - **6 Core Guardrails**:
-    1. Wajib `.AsNoTracking()` atau proyeksi langsung DTO pada semua query pembacaan data (GET).
-    2. Pemisahan konfigurasi entitas menggunakan class `IEntityTypeConfiguration<T>` tersendiri.
-    3. Larangan query database di dalam perulangan loop (eliminasi N+1 query).
-    4. Wajib propagasi `CancellationToken` ke semua method async EF Core.
-    5. Penggunaan native SQL bulk operations (`ExecuteUpdateAsync` & `ExecuteDeleteAsync`) untuk mutasi masal.
-    6. Wajib penggunaan abstraksi `TimeProvider` pada interceptor dan domain logic.
-  - Interceptor audit trail otomatis (`AuditSaveChangesInterceptor`) untuk pengisian `CreatedAt` dan `UpdatedAt`.
-  - Extension method paginasi standar (`ToPagedResultAsync`).
+    1. Required `.AsNoTracking()` or direct DTO projection on every data read query (GET).
+    2. Entity configuration separated into dedicated `IEntityTypeConfiguration<T>` classes.
+    3. No database queries inside loops (N+1 query elimination).
+    4. Required `CancellationToken` propagation to every async EF Core method.
+    5. Native SQL bulk operations (`ExecuteUpdateAsync` & `ExecuteDeleteAsync`) for bulk mutations.
+    6. Required `TimeProvider` abstraction in interceptors and domain logic.
+  - Automatic audit trail interceptor (`AuditSaveChangesInterceptor`) for filling `CreatedAt` and `UpdatedAt`.
+  - Standard pagination extension method (`ToPagedResultAsync`).
 
-- **Dokumentasi & Repository Setup**:
-  - `README.md` komprehensif berisi katalog skill, ringkasan guardrails, 3 opsi instalasi (Workspace, Git Submodule, Global Antigravity), dan contoh prompt aktivasi.
-  - `.gitignore` komprehensif mencakup sistem operasi, IDE, cache AI/scratch, dan build artifacts .NET.
-
+- **Documentation & Repository Setup**:
+  - Comprehensive `README.md` with the skill catalog, guardrails summary, 3 installation options (Workspace, Git Submodule, Global Antigravity), and activation prompt examples.
+  - Comprehensive `.gitignore` covering operating systems, IDEs, AI/scratch caches, and .NET build artifacts.

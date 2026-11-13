@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+### Changed
+
+- `dotnet-api-design`: in existing projects, established project conventions (response shape,
+  data access, error handling) take precedence over G1-G7 for new code; the completion gate
+  and response checks follow the project's existing format.
+- `dotnet-api-design`: Workflow A no longer creates the skill's foundation or `Modules/` layout
+  in existing projects that do not use them; it follows the project's conventions instead.
+
+---
+
 ## [3.0.0] - 2026-11-13
 
 ### ⚠ Breaking changes

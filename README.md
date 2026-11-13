@@ -1,6 +1,6 @@
-# 🤖 Enterprise .NET Agent Skills
+# 🤖 .NET Agent Skills
 
-A collection of standard **Agent Skills** for AI Coding Assistants ([Google Antigravity](https://antigravity.google), [Claude Code](https://claude.com/product/claude-code), [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot), etc.) designed to speed up building, refactoring, and standardizing enterprise backend architecture on **.NET 10 (C# 14)** and **Entity Framework Core**.
+A collection of standard **Agent Skills** for AI Coding Assistants ([Google Antigravity](https://antigravity.google), [Claude Code](https://claude.com/product/claude-code), [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot), etc.) designed to speed up building, refactoring, and standardizing backend architecture on **.NET 10 (C# 14)** and **Entity Framework Core**.
 
 ---
 

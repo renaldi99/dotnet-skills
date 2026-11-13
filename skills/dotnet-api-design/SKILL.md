@@ -19,12 +19,16 @@ For maintenance, keep the framework, database provider, and contracts already in
 - Do not use for Console/Worker apps without HTTP, microservices/event bus migrations, or Minimal APIs without layering.
 - A review/analysis-only request does not grant permission to modify files.
 - If the task requires contract or architecture changes beyond the request, ask for approval first.
+- In existing projects, the project's established conventions (response shape, data access,
+  error handling) take precedence for new code in the same area. Apply G1-G7 only where they
+  do not contradict those conventions, and propose adopting the standard as a separate change.
 
 ## Core guardrails: primary source of rules
 
 Read G1-G7 before editing and check them again before declaring the work done.
 References provide implementation examples, not alternative rules.
 
+<!-- prettier-ignore -->
 | ID | Mandatory rule |
 | :--- | :--- |
 | **G1 Cancellation** | Async Controller/Service/Repository methods accept and forward the request token down to the I/O operation. Controllers accept `CancellationToken cancellationToken`; Services/Repositories may use `= default`, but callers must forward the available token. Do not create fake async methods for synchronous operations. |
@@ -43,6 +47,7 @@ report conflicts with project rules and ask for clarification instead of silentl
 Do not read all references at once. Open only the relevant sections; skip examples
 when existing patterns are sufficient. Do not reload files that are still fully in context.
 
+<!-- prettier-ignore -->
 | Need | Read |
 | :--- | :--- |
 | Create/change the envelope, domain errors, or exception handler | [Foundation](references/foundation.md) |
@@ -72,11 +77,13 @@ the API contract and layering; report rule conflicts instead of silently picking
    New projects use .NET 10 / C# 14; new modules in existing projects follow the project.
 2. Use the vertical structure `Modules/{ModuleName}/`:
    `Controllers/`, `Services/`, `Repositories/`, `Dtos/`, `Entities/`, `Validators/`
-   (when needed), and `{ModuleName}ModuleExtensions.cs`.
-3. Reuse the `Common/` and `Data/` foundations. If they do not exist, read Foundation and Bootstrap;
-   do not copy/overwrite `Program.cs` wholesale into an existing project.
+   (when needed), and `{ModuleName}ModuleExtensions.cs`. Existing projects keep their folder layout.
+3. Reuse the `Common/` and `Data/` foundations. In a new project without them, read Foundation and
+   Bootstrap; in an existing project without them, follow its established conventions instead.
+   Do not copy/overwrite `Program.cs` wholesale into an existing project.
 4. Implement the Entity/configuration and DTOs, then the specific repository, service,
-   thin controller, and scoped DI registration. Apply G1-G7 in every layer.
+   thin controller, and scoped DI registration. Apply G1-G7 in every layer, within the
+   project's conventions (see Activation and boundaries).
 5. For writes: validate before mutating, normalize input consistently, and
    use database constraints for invariants such as uniqueness. Define transaction boundaries.
 6. Add focused tests for the happy path, invalid input, business errors,
@@ -105,7 +112,9 @@ Separate project rule violations from general design preferences.
 ## Completion gate
 
 - Check the diff against **G1-G7**, not only newly written code. The scope is the changed paths.
-- Verify DTOs/status/envelope for success, validation failure, and affected domain errors.
+  In existing projects, established project conventions take precedence where they differ from G1-G7.
+- Verify DTOs/status/response shape (the envelope, or the project's existing format) for success,
+  validation failure, and affected domain errors.
   For auth/pipeline changes, also check 401/403/404/405/415 according to the contract.
 - Verify read/write tracking, list bounds, unique pagination ordering, and tokens down to I/O.
 - Run the narrowest build and tests that cover the change, using the project/CI configuration:

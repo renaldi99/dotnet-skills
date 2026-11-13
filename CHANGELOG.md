@@ -13,6 +13,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - Skills moved into a `skills/` directory (`skills/dotnet-api-design`, `skills/efcore-pattern`).
   Update install scripts to copy from `skills/<skill-name>`; installed skill paths in consuming
   projects (`.agents/skills/<skill-name>`) are unchanged.
+- `efcore-pattern`: new guardrail 7, `AppDbContext` may be injected only into repositories.
+  Services and controllers that inject `AppDbContext` directly no longer comply; move their
+  data access into a specific repository. Pattern 4 no longer offers the direct-service option.
+
+### Added
+
+- `efcore-pattern`: Pattern 4 service example that depends only on `IProductRepository`,
+  an anti-pattern row for `AppDbContext` in services, and a matching checklist item.
+
+### Fixed
+
+- `efcore-pattern`: the read (Pattern 2A) and pagination (Pattern 7) examples now end their
+  ordering on a unique key (`.ThenBy(p => p.Id)`), and the checklist adds a unique-ordering item.
+- `efcore-pattern`: `ProductRepository.GetByIdAsync` is now `AsNoTracking()` as guardrail 1
+  requires; a separate tracked `GetForUpdateAsync` is added for mutations.
+- `efcore-pattern`: the checklist no longer suggests `TimeProvider.System.GetUtcNow()` in code;
+  it requires an injected `TimeProvider`, matching guardrail 6.
 
 ## [2.1.0] - 2026-11-12
 

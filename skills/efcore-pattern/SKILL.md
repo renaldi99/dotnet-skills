@@ -32,7 +32,7 @@ Standard architecture guide and implementation patterns for **Entity Framework C
 
 ## 2. Core Guardrails (Absolute AI Rules)
 
-When writing or modifying EF Core code, the AI agent **MUST** follow these 6 absolute rules:
+When writing or modifying EF Core code, the AI agent **MUST** follow these 7 absolute rules:
 
 1. **`.AsNoTracking()` Required for Reads**: Every read query (GET/query) must use `.AsNoTracking()` or project directly to a DTO via `.Select()`.
 2. **Separate Entity Configuration**: Do not use database Data Annotations (`[Table]`, `[Column]`, `[ForeignKey]`) in entity models. Use a separate `IEntityTypeConfiguration<T>` class.
@@ -40,10 +40,13 @@ When writing or modifying EF Core code, the AI agent **MUST** follow these 6 abs
 4. **Always Forward `CancellationToken`**: Every async EF Core call (`ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, `ExecuteUpdateAsync`, etc.) must accept and forward a `CancellationToken cancellationToken = default` parameter.
 5. **Use Bulk Operations for Multi-Row Mutations**: Do not load tens/hundreds of rows into memory just to change a column or delete data. Use `ExecuteUpdateAsync()` or `ExecuteDeleteAsync()`.
 6. **`TimeProvider` Abstraction Required**: Do not use a static `DateTime.UtcNow` in interceptors or domain logic. Use an injected `TimeProvider` dependency.
+7. **`AppDbContext` Only in Repositories**: Inject `AppDbContext` only into repository classes. Services and controllers must not inject it; they depend on specific repository interfaces.
 
 ---
 
 ## 3. Standard EF Core Design Patterns (Implementation & Code)
+
+Snippets in this section that use `context` belong inside repository classes (guardrail 7).
 
 ### Pattern 1: Separate Entity Configuration (`IEntityTypeConfiguration<T>`)
 
@@ -120,6 +123,7 @@ public async Task<List<ProductResponse>> GetActiveProductsAsync(CancellationToke
         .AsNoTracking()
         .Where(p => p.IsActive)
         .OrderBy(p => p.Name)
+        .ThenBy(p => p.Id) // Unique tiebreaker: names can repeat, so the order must end on a key
         .Select(p => new ProductResponse(
             p.Id,
             p.Name,
@@ -171,14 +175,15 @@ var productSummaries = await context.Products
 
 ---
 
-### Pattern 4: Specific Repository / Direct Service
+### Pattern 4: Specific Repository (DbContext Only in Repositories)
 
-Avoid a generic `IRepository<T>` abstraction that leaks `IQueryable`. Create specific repositories that express business needs, or inject `AppDbContext` directly into the Service layer.
+Avoid a generic `IRepository<T>` abstraction that leaks `IQueryable`. Create specific repositories that express business needs. `AppDbContext` is injected only into repositories; services depend on the repository interface, never on `AppDbContext`.
 
 ```csharp
 public interface IProductRepository
 {
     Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
     Task<List<ProductResponse>> GetByCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default);
     Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
     Task AddAsync(Product product, CancellationToken cancellationToken = default);
@@ -187,7 +192,12 @@ public interface IProductRepository
 
 public class ProductRepository(AppDbContext context) : IProductRepository
 {
+    // Read-only: not tracked (guardrail 1)
     public Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+    // Load for mutation: tracked on purpose, so changes are saved by SaveChangesAsync
+    public Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Products.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
     public Task<List<ProductResponse>> GetByCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default) =>
@@ -206,6 +216,26 @@ public class ProductRepository(AppDbContext context) : IProductRepository
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
 }
+```
+
+The service uses only the repository interface:
+
+```csharp
+// ✅ Service depends on IProductRepository, not AppDbContext
+public class ProductService(IProductRepository repository)
+{
+    public async Task<bool> UpdatePriceAsync(Guid id, decimal newPrice, CancellationToken cancellationToken = default)
+    {
+        var product = await repository.GetForUpdateAsync(id, cancellationToken);
+        if (product is null) return false;
+
+        product.Price = newPrice;
+        await repository.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+}
+
+// ❌ ANTI-PATTERN: public class ProductService(AppDbContext context) { ... }
 ```
 
 ---
@@ -288,7 +318,9 @@ int deletedRows = await context.Products
 
 ### Pattern 7: Standard Pagination (Offset / PagedResult)
 
-An efficient pagination formula that limits record retrieval at the database server level:
+An efficient pagination formula that limits record retrieval at the database server level.
+The ordering must be unique (end on a key such as `Id`); otherwise rows with equal sort values
+can appear on two pages or be skipped between requests.
 
 ```csharp
 public record PagedResult<T>(List<T> Items, int TotalCount, int PageNumber, int PageSize);
@@ -306,6 +338,7 @@ public async Task<PagedResult<ProductResponse>> GetPagedProductsAsync(
 
     var items = await query
         .OrderBy(p => p.Name)
+        .ThenBy(p => p.Id) // Unique tiebreaker for stable pages
         .Skip((pageNumber - 1) * pageSize)
         .Take(pageSize)
         .Select(p => new ProductResponse(p.Id, p.Name, p.Price, p.Category.Name))
@@ -321,7 +354,8 @@ public async Task<PagedResult<ProductResponse>> GetPagedProductsAsync(
 
 | Anti-Pattern | Negative Impact | Standard Solution |
 | :--- | :--- | :--- |
-| **Generic `IRepository<T>`** | Leaky abstraction, scattered query filters | Use a **Specific Repository** or DbContext directly in the service layer. |
+| **Generic `IRepository<T>`** | Leaky abstraction, scattered query filters | Use a **Specific Repository**. |
+| **`AppDbContext` in Services** | Queries scattered across layers, hard to test and reuse | Move data access into a **Specific Repository**; the service depends on its interface. |
 | **N+1 Query Problem** | Tens/hundreds of database roundtrips | Use **`.Include()`** or a **`.Select()`** projection. |
 | **In-Memory Filtering** | Loads millions of records into RAM (`.ToList()` then `.Where()`) | Put the **`.Where()` filter before `.ToListAsync()`**. |
 | **Missing `AsNoTracking`** | Memory bloat on GET operations | Add **`.AsNoTracking()`** to every read query. |
@@ -351,6 +385,7 @@ Use this checklist when building new features, refactoring database queries, or 
   - Use `.Include()` for relationships or rely on `.Select()`.
 - [ ] **Efficient Existence Checks**: Use `.AnyAsync(...)` instead of `CountAsync() > 0` or `FirstOrDefaultAsync() != null`.
 - [ ] **Pagination in the Database**: `.Skip().Take()` pagination runs on the `IQueryable` before `.ToListAsync()`.
+- [ ] **Unique Ordering**: Ordered and paginated queries end on a unique key (for example `.ThenBy(p => p.Id)`).
 
 ### C. Create, Update & Delete (POST, PUT, DELETE)
 - [ ] **Tracked Entity for Single Updates**: The entity is loaded from the DbContext, its values are changed, then saved with `await context.SaveChangesAsync(cancellationToken)`.
@@ -358,9 +393,10 @@ Use this checklist when building new features, refactoring database queries, or 
 - [ ] **Single `SaveChangesAsync`**: Operations that must succeed together are saved in a single `SaveChangesAsync()` call so they run in one transaction automatically.
 
 ### D. Performance & Code Hygiene
+- [ ] **DbContext Only in Repositories**: No service or controller injects `AppDbContext`; data access goes through specific repository interfaces.
 - [ ] **`CancellationToken` Required**: Every async call (`ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, etc.) forwards the `cancellationToken` parameter.
 - [ ] **Automatic Audit Trail**: `CreatedAt` and `UpdatedAt` are filled automatically via `SaveChangesInterceptor` (not manually in controllers/services).
-- [ ] **Use `TimeProvider`**: The current time is obtained via `TimeProvider.System.GetUtcNow()` so it is easy to unit test.
+- [ ] **Use `TimeProvider`**: The current time comes from an injected `TimeProvider` (`timeProvider.GetUtcNow()`); `TimeProvider.System` is only registered once in DI, so tests can substitute `FakeTimeProvider`.
 - [ ] **Clean Build**: The code builds without warnings (`dotnet build`).
 
 ---

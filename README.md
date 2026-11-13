@@ -39,6 +39,7 @@ Long templates are loaded only when needed.
 - **No N+1 Queries**: Use eager loading (`.Include()`) or `.Select()` projection. Do not run database queries inside loops.
 - **Native Bulk Operations**: Use `.ExecuteUpdateAsync()` and `.ExecuteDeleteAsync()` for bulk mutations without loading entities into memory.
 - **TimeProvider Interceptors**: Automatic audit columns (`CreatedAt`, `UpdatedAt`) must inject the `TimeProvider` abstraction (not a static `DateTime.UtcNow`).
+- **`AppDbContext` Only in Repositories**: Services and controllers never inject `AppDbContext`; they depend on specific repository interfaces.
 
 ---
 

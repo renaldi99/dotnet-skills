@@ -67,7 +67,8 @@ rm -rf /tmp/dotnet-skills
 ```
 
 The commands above fetch the latest version from the default branch. For a specific release,
-add `--branch <tag>` to `git clone` (for example `--branch v3.0.0`).
+add `--branch <tag>` to `git clone`; see the [tags](https://github.com/renaldi99/dotnet-skills/tags)
+for available versions.
 
 To install every skill at once, replace the two `cp` lines (before `rm -rf`) with:
 

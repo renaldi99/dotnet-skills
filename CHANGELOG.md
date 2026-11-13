@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-13
+
 ### ⚠ Breaking changes
 
 - Skills moved into a `skills/` directory (`skills/dotnet-api-design`, `skills/efcore-pattern`).
@@ -21,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 - `efcore-pattern`: Pattern 4 service example that depends only on `IProductRepository`,
   an anti-pattern row for `AppDbContext` in services, and a matching checklist item.
+- README: command to install every skill at once from `skills/`.
 
 ### Fixed
 
@@ -30,6 +33,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
   requires; a separate tracked `GetForUpdateAsync` is added for mutations.
 - `efcore-pattern`: the checklist no longer suggests `TimeProvider.System.GetUtcNow()` in code;
   it requires an injected `TimeProvider`, matching guardrail 6.
+
+---
 
 ## [2.1.0] - 2026-11-12
 

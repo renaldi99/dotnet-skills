@@ -65,14 +65,14 @@ cp -r /tmp/dotnet-skills/skills/efcore-pattern .agents/skills/
 rm -rf /tmp/dotnet-skills
 ```
 
-or if you want to use all skill
+The commands above fetch the latest version from the default branch. For a specific release,
+add `--branch <tag>` to `git clone` (for example `--branch v2.1.0`).
+
+To install every skill at once, replace the two `cp` lines (before `rm -rf`) with:
 
 ```bash
-cp -r /tmp/dotnet-skills/skills/* .agents/skills
+cp -r /tmp/dotnet-skills/skills/* .agents/skills/
 ```
-
-The command above fetches the latest version from the default branch. For a specific release,
-add `--branch <tag>` to `git clone` (for example `--branch v2.1.0`).
 
 > **Folder Structure in Your Project:**
 >
@@ -107,9 +107,9 @@ git submodule add https://github.com/renaldi99/dotnet-skills.git .agents/skills/
       .agents/skills/dotnet-api-design/SKILL.md                        ← layout most hosts scan
 ```
 
-Many host only discover skills directly under `.agents/skills/<skill-name>/`, so check that your
+Many hosts only discover skills directly under `.agents/skills/<skill-name>/`, so check that your
 host finds them. If it does not, use Option 1 (copy each skill from `skills/<skill-name>`) or a
-location your host supports; having a submodule does not guarantee discovery
+location your host supports; having a submodule does not guarantee discovery.
 
 ---
 

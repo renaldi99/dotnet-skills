@@ -2,11 +2,11 @@
 
 This file applies only to this skill catalog repository, not to backend projects
 that install the skills. The anchor for consuming projects is in
-`dotnet-api-design/references/enforcement.md`.
+`skills/dotnet-api-design/references/enforcement.md`.
 
 ## Source of rules
 
-- `dotnet-api-design/SKILL.md` is the only source of G1-G7. References, README, and
+- `skills/dotnet-api-design/SKILL.md` is the only source of G1-G7. References, README, and
   CHANGELOG only point to or illustrate them; do not write a different version of the rules.
 - Each skill stands alone: do not link, require, or align the content of one
   skill with another. Users decide which skills to combine through their prompts.
@@ -34,7 +34,7 @@ listed there must be updated, not only the catalog table.
 ## Before declaring done
 
 1. Check that relative links in `SKILL.md`, README, and CHANGELOG are still valid.
-2. Check the `SKILL.md` line count (`wc -l */SKILL.md`).
+2. Check the `SKILL.md` line count (`wc -l skills/*/SKILL.md`).
 3. Search for leftovers of removed patterns (for example `grep -rn "<old pattern>" .`).
 4. Record changes in `CHANGELOG.md` under `[Unreleased]`.
 5. Do not commit/push without a request from the repository owner.

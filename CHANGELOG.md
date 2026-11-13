@@ -8,9 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+### ⚠ Breaking changes
+
+- Skills moved into a `skills/` directory (`skills/dotnet-api-design`, `skills/efcore-pattern`).
+  Update install scripts to copy from `skills/<skill-name>`; installed skill paths in consuming
+  projects (`.agents/skills/<skill-name>`) are unchanged.
+
 ## [2.1.0] - 2026-11-12
 
 ### Changed
+
 - Translate both skills, their references, README, AGENTS.md, and this changelog to English.
   Rules, G1-G7 IDs, structure, and code behavior are unchanged; message strings in code examples
   are now in English. Use `v2.0.0` for the Indonesian version.
@@ -20,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [2.0.0] - 2026-11-12
 
 ### ⚠ Breaking changes
+
 - G1: controllers accept `CancellationToken` without `= default`.
 - G2: automatic validation errors use the `ApiResponse` envelope; file/stream, HEAD,
   204/304, health check, and OpenAPI responses are no longer wrapped.
@@ -28,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
   skills no longer link to each other.
 
 ### Added
+
 - `PUT` (Update) endpoint example in the Employees module with the `UpdateEmployeeRequest` DTO.
 - Service unit test examples (xUnit, NSubstitute, FakeTimeProvider) for email conflicts,
   audit timestamps, not found, and `CancellationToken` propagation.
@@ -36,11 +45,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - README usage scenario showing how to combine two skills explicitly in one prompt.
 
 ### Fixed
+
 - The Employees repository now translates `UX_Employees_Email` index violations (SQL Server
   2601/2627) into `ConflictException` at the persistence boundary; previously the example did not
   include this adapter, so concurrent duplicate email inserts resulted in 500.
 
 ### Changed
+
 - README installation guide now uses the real repository URL (`renaldi99/dotnet-skills`),
   documents optional `--branch <tag>` pinning to a release, and adds the missing clone step
   to the global install (Option 3).
@@ -67,7 +78,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ## [1.0.0] - 2026-11-11
 
 ### Added
-- **`dotnet-api-design` skill** ([`dotnet-api-design/SKILL.md`](./dotnet-api-design/SKILL.md)):
+
+- **`dotnet-api-design` skill** ([`skills/dotnet-api-design/SKILL.md`](./skills/dotnet-api-design/SKILL.md)):
   - Standard for designing, scaffolding, and refactoring RESTful APIs on **.NET 10 (C# 14)** with a **Modular Monolith** architecture.
   - **7 Core Guardrails**:
     1. Required `CancellationToken cancellationToken = default` parameter on every async method.
@@ -77,10 +89,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
     5. JOIN operations resolved at the database level & no in-memory joins.
     6. Modern C# 14 idioms (Primary Constructors, Collection Expressions `[..]`, and `TimeProvider`).
     7. Centralized error handling by throwing `AppException` subclasses handled by `GlobalExceptionHandler` (`IExceptionHandler`).
-  - Database performance reference document ([`dotnet-api-design/references/database-performance.md`](./dotnet-api-design/references/database-performance.md)) covering N+1 query prevention, `AsSplitQuery` guidance, and pagination.
+  - Database performance reference document ([`skills/dotnet-api-design/references/database-performance.md`](./skills/dotnet-api-design/references/database-performance.md)) covering N+1 query prevention, `AsSplitQuery` guidance, and pagination.
   - Golden scaffolding template for the `Employees` module covering Controller, Service, Repository, DTO records, and DI registration.
 
-- **`efcore-pattern` skill** ([`efcore-pattern/SKILL.md`](./efcore-pattern/SKILL.md)):
+- **`efcore-pattern` skill** ([`skills/efcore-pattern/SKILL.md`](./skills/efcore-pattern/SKILL.md)):
   - Implementation guide and best practices for **Entity Framework Core (EF Core 9 / .NET 10 & C# 14)** for a high-performance persistence layer.
   - **6 Core Guardrails**:
     1. Required `.AsNoTracking()` or direct DTO projection on every data read query (GET).

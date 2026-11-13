@@ -11,8 +11,8 @@ This repository contains modular skills that an AI agent can load _on demand_:
 <!-- prettier-ignore -->
 | Skill | Scope & Focus | Target Platform | Document |
 | :--- | :--- | :--- | :---: |
-| **`dotnet-api-design`** | Scaffolding, new features, bug fixes, reviews, and maintenance of **Modular Monolith** REST APIs with G1-G7 guardrails and on-demand references. | New projects: .NET 10 / C# 14; maintenance follows the project | [`SKILL.md`](./dotnet-api-design/SKILL.md) |
-| **`efcore-pattern`** | High-performance persistence layer design, separate `IEntityTypeConfiguration<T>` configuration, N+1 query elimination, automatic audit interceptors, native SQL bulk update/delete, and standard pagination. | EF Core 9 / 10 | [`SKILL.md`](./efcore-pattern/SKILL.md) |
+| **`dotnet-api-design`** | Scaffolding, new features, bug fixes, reviews, and maintenance of **Modular Monolith** REST APIs with G1-G7 guardrails and on-demand references. | New projects: .NET 10 / C# 14; maintenance follows the project | [`SKILL.md`](./skills/dotnet-api-design/SKILL.md) |
+| **`efcore-pattern`** | High-performance persistence layer design, separate `IEntityTypeConfiguration<T>` configuration, N+1 query elimination, automatic audit interceptors, native SQL bulk update/delete, and standard pagination. | EF Core 9 / 10 | [`SKILL.md`](./skills/efcore-pattern/SKILL.md) |
 
 ---
 
@@ -24,7 +24,7 @@ text instructions alone do not guarantee the AI always activates a skill or foll
 
 ### 1. `dotnet-api-design`
 
-The primary source of rules is **G1-G7 in [SKILL.md](./dotnet-api-design/SKILL.md)**:
+The primary source of rules is **G1-G7 in [SKILL.md](./skills/dotnet-api-design/SKILL.md)**:
 cancellation, HTTP contract, versioning, specific repositories, database queries, C#/time,
 and error handling. HTTP exceptions and the difference between read-only and tracked mutation
 are defined there, not duplicated in the README.
@@ -60,9 +60,15 @@ mkdir -p .agents/skills
 
 # Clone this repo into a temporary folder, then copy the skills you need:
 git clone --depth 1 https://github.com/renaldi99/dotnet-skills.git /tmp/dotnet-skills
-cp -r /tmp/dotnet-skills/dotnet-api-design .agents/skills/
-cp -r /tmp/dotnet-skills/efcore-pattern .agents/skills/
+cp -r /tmp/dotnet-skills/skills/dotnet-api-design .agents/skills/
+cp -r /tmp/dotnet-skills/skills/efcore-pattern .agents/skills/
 rm -rf /tmp/dotnet-skills
+```
+
+or if you want to use all skill
+
+```bash
+cp -r /tmp/dotnet-skills/skills/* .agents/skills
 ```
 
 The command above fetches the latest version from the default branch. For a specific release,
@@ -94,8 +100,16 @@ If you want to sync skill updates from this repository into multiple projects ea
 git submodule add https://github.com/renaldi99/dotnet-skills.git .agents/skills/dotnet-skills
 ```
 
-Check whether your host discovers skills in nested folders. If not, use the direct
-per-skill installation or a location your host supports; having a submodule does not guarantee discovery.
+**Note:** with a submodule, each skill ends up two levels deeper than hosts usually expect:
+
+```text
+      .agents/skills/dotnet-skills/skills/dotnet-api-design/SKILL.md   ← submodule layout
+      .agents/skills/dotnet-api-design/SKILL.md                        ← layout most hosts scan
+```
+
+Many host only discover skills directly under `.agents/skills/<skill-name>/`, so check that your
+host finds them. If it does not, use Option 1 (copy each skill from `skills/<skill-name>`) or a
+location your host supports; having a submodule does not guarantee discovery
 
 ---
 
@@ -107,8 +121,8 @@ If you use **Google Antigravity** and want these skills active in every project 
 # Antigravity Global Customizations
 git clone --depth 1 https://github.com/renaldi99/dotnet-skills.git /tmp/dotnet-skills
 mkdir -p ~/.gemini/config/skills
-cp -r /tmp/dotnet-skills/dotnet-api-design ~/.gemini/config/skills/
-cp -r /tmp/dotnet-skills/efcore-pattern ~/.gemini/config/skills/
+cp -r /tmp/dotnet-skills/skills/dotnet-api-design ~/.gemini/config/skills/
+cp -r /tmp/dotnet-skills/skills/efcore-pattern ~/.gemini/config/skills/
 rm -rf /tmp/dotnet-skills
 ```
 
@@ -142,7 +156,7 @@ depends on the host/model; verify the skill is available and invoke it explicitl
 
 ### Strengthening Rule Compliance
 
-Use the [enforcement guide](./dotnet-api-design/references/enforcement.md) to add a short
+Use the [enforcement guide](./skills/dotnet-api-design/references/enforcement.md) to add a short
 instruction anchor in **the user's backend repository** and choose the relevant
 analyzers/tests/CI. The `AGENTS.md` in this skill catalog does not automatically apply to consuming projects.
 Do not copy every template into permanent instructions; point to G1-G7 and read references as needed.
@@ -159,17 +173,18 @@ dotnet-skills/
 ├── LICENSE                             # MIT License
 ├── .gitignore                          # Ignore rules for OS files and temporary caches
 │
-├── dotnet-api-design/                  # .NET 10 RESTful API architecture skill
-│   ├── SKILL.md                        # G1-G7, reference routing, and concise workflows
-│   └── references/
-│       ├── foundation.md               # Envelope, error codes, exception handler
-│       ├── module-scaffolding.md       # Employees module example
-│       ├── bootstrap.md                # DI, automatic validation, HTTP pipeline
-│       ├── database-performance.md     # Queries, pagination, uniqueness, bulk
-│       └── enforcement.md              # Host instructions and automated checks
-│
-└── efcore-pattern/                     # EF Core 9/10 design pattern skill
-    └── SKILL.md                        # Entity configuration, interceptor, & bulk SQL guide
+└── skills/                             # All skills, one folder per skill
+    ├── dotnet-api-design/              # .NET 10 RESTful API architecture skill
+    │   ├── SKILL.md                    # G1-G7, reference routing, and concise workflows
+    │   └── references/
+    │       ├── foundation.md           # Envelope, error codes, exception handler
+    │       ├── module-scaffolding.md   # Employees module example
+    │       ├── bootstrap.md            # DI, automatic validation, HTTP pipeline
+    │       ├── database-performance.md # Queries, pagination, uniqueness, bulk
+    │       └── enforcement.md          # Host instructions and automated checks
+    │
+    └── efcore-pattern/                 # EF Core 9/10 design pattern skill
+        └── SKILL.md                    # Entity configuration, interceptor, & bulk SQL guide
 ```
 
 ---
@@ -179,7 +194,7 @@ dotnet-skills/
 Want to add a new skill or update an existing guide?
 
 1. Fork this repository.
-2. Create a new skill directory: `<skill-name>/SKILL.md`.
+2. Create a new skill directory: `skills/<skill-name>/SKILL.md`.
 3. Make sure `SKILL.md` includes YAML frontmatter in this format:
    ```markdown
    ---

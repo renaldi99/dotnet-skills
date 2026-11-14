@@ -174,6 +174,8 @@ dotnet-skills/
 ├── AGENTS.md                           # Catalog maintenance instructions (not for consuming projects)
 ├── LICENSE                             # MIT License
 ├── .gitignore                          # Ignore rules for OS files and temporary caches
+├── .github/
+│   └── pull_request_template.md        # PR checklist and change type for contributors
 │
 └── skills/                             # All skills, one folder per skill
     ├── dotnet-api-design/              # .NET 10 RESTful API architecture skill
@@ -216,8 +218,11 @@ Want to add a new skill or update an existing guide?
    - [ ] **Usage Trigger Examples**: at least one scenario; add a combined prompt example
          when the skill is commonly used together with another skill.
    - [ ] **Repository Structure**: the skill folder with `SKILL.md` and `references/` if any.
-7. Record the addition in `CHANGELOG.md` under `[Unreleased]` → `Added`.
-8. Open a Pull Request.
+7. Do not edit `CHANGELOG.md`; the maintainer records changes there at release time.
+8. Open a Pull Request with a [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+   title (for example `feat: add <skill-name> skill`) and fill in the
+   [pull request template](./.github/pull_request_template.md), including the
+   "Summary for users" section.
 
 ---
 

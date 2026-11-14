@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- Pull request template (`.github/pull_request_template.md`) with change type, user-facing
+  summary, and a contribution checklist.
+
+### Changed
+
+- Contributors no longer edit `CHANGELOG.md`; the maintainer records changes at release time
+  from PR titles (Conventional Commits) and the template's "Summary for users" section.
+  `README.md` (Contributing) and `AGENTS.md` are updated accordingly.
+
 ## [3.1.0] - 2026-11-14
 
 ### Changed

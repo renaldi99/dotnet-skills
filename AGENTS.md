@@ -36,5 +36,8 @@ listed there must be updated, not only the catalog table.
 1. Check that relative links in `SKILL.md`, README, and CHANGELOG are still valid.
 2. Check the `SKILL.md` line count (`wc -l skills/*/SKILL.md`).
 3. Search for leftovers of removed patterns (for example `grep -rn "<old pattern>" .`).
-4. Record changes in `CHANGELOG.md` under `[Unreleased]`.
+4. Do not edit `CHANGELOG.md` in a contribution; the maintainer records changes at release
+   time. Instead, use a Conventional Commits PR title and fill in the "Type of change" and
+   "Summary for users" sections of `.github/pull_request_template.md`. Edit `CHANGELOG.md`
+   only when the repository owner explicitly asks (for example, when preparing a release).
 5. Do not commit/push without a request from the repository owner.

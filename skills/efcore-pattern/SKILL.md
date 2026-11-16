@@ -298,9 +298,20 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 Execute SQL `UPDATE` or `DELETE` statements directly against the database without loading thousands of rows into RAM.
 
 ```csharp
+// ❌ ANTI-PATTERN: load every matching entity into memory, then update one by one
+var products = await context.Products
+    .Where(p => p.CategoryId == categoryId && p.IsActive)
+    .ToListAsync(cancellationToken); // Thousands of tracked rows in RAM
+foreach (var p in products)
+{
+    p.Price *= 1.10m;
+}
+await context.SaveChangesAsync(cancellationToken); // One UPDATE statement per row
+
 var now = timeProvider.GetUtcNow();
 
-// Bulk update directly in the database
+// ✅ Bulk update directly in the database (single UPDATE statement).
+// ExecuteUpdateAsync bypasses the change tracker, so AuditInterceptor does not run: set UpdatedAt here.
 int updatedRows = await context.Products
     .Where(p => p.CategoryId == categoryId && p.IsActive)
     .ExecuteUpdateAsync(setter => setter
@@ -308,7 +319,7 @@ int updatedRows = await context.Products
         .SetProperty(p => p.UpdatedAt, now),
         cancellationToken);
 
-// Bulk delete directly in the database
+// ✅ Bulk delete directly in the database
 int deletedRows = await context.Products
     .Where(p => !p.IsActive && p.CreatedAt < cutOffDate)
     .ExecuteDeleteAsync(cancellationToken);
